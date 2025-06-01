@@ -209,8 +209,147 @@
             z-index: 1000;
         }
 
-        .notification.error {
+        .cycle-expansion {
+            color: #27ae60;
+        }
+
+        .cycle-peak {
+            color: #f39c12;
+        }
+
+        .cycle-contraction {
+            color: #e74c3c;
+        }
+
+        .cycle-trough {
+            color: #8e44ad;
+        }
+
+        .bot-indicator {
+            background: linear-gradient(45deg, #9b59b6, #3498db);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+
+        .activity-feed {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 15px;
+        }
+
+        .activity-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 0.9em;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .event-badge {
             background: #e74c3c;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            margin-right: 5px;
+        }
+
+        .bot-action {
+            color: #3498db;
+        }
+
+        .risk-low {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .risk-medium {
+            color: #f39c12;
+            font-weight: bold;
+        }
+
+        .risk-high {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .risk-extreme {
+            color: #8e44ad;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .analytics-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .analytics-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .trend-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .trend-bullish {
+            background: #27ae60;
+            color: white;
+        }
+
+        .trend-bearish {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .trend-neutral {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .cartel-alert {
+            background: #e74c3c;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+            animation: flash 2s infinite;
+        }
+
+        @keyframes flash {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.5; }
         }
     </style>
 </head>
@@ -229,7 +368,8 @@
     <div id="gameArea" class="container">
         <div class="header">
             <h1>🏦 Simulador de Economía Multiplayer</h1>
-            <p>Tick: <span id="currentTick">0</span> | Jugadores: <span id="playerCount">0</span></p>
+            <p>Tick: <span id="currentTick">0</span> | Jugadores: <span id="playerCount">0</span> | Bots: <span id="botCount">0</span></p>
+            <p>Ciclo Económico: <span id="economicCycle">expansion</span> | Riesgo: <span id="riskLevel">medium</span></p>
         </div>
 
         <div class="game-stats">
@@ -262,7 +402,28 @@
                 <button onclick="updateLeaderboard()" class="btn btn-buy" style="margin-top: 10px;">
                     Actualizar
                 </button>
+
+                <h2 style="margin-top: 30px;">📰 Actividad del Mercado</h2>
+                <div id="activityFeed" class="activity-feed"></div>
             </div>
+        </div>
+
+        <div class="panel analytics-panel">
+            <h2>📊 Analytics de Mercado</h2>
+            <div class="analytics-grid">
+                <div class="analytics-card">
+                    <h3>Tendencia General</h3>
+                    <span id="marketTrend" class="trend-indicator trend-neutral">Cargando...</span>
+                </div>
+                <div class="analytics-card">
+                    <h3>Alertas de Carteles</h3>
+                    <span id="cartelCount">0</span> detectadas
+                </div>
+            </div>
+            <div id="cartelAlerts"></div>
+            <button onclick="updateAnalytics()" class="btn btn-buy" style="margin-top: 15px;">
+                Actualizar Analytics
+            </button>
         </div>
 
         <div class="panel" style="margin-top: 30px;">
@@ -289,6 +450,7 @@
         let gameData;
         let priceChart;
         let priceHistory = {};
+        let activityLog = [];
 
         // Inicializar conexión
         function initSocket() {
@@ -310,6 +472,12 @@
                 updateUI();
                 initChart();
                 showNotification('¡Bienvenido al juego!', 'success');
+                
+                // Solicitar datos inmediatamente
+                setTimeout(() => {
+                    updateLeaderboard();
+                    updateAnalytics();
+                }, 500);
             });
 
             socket.on('trade_result', (data) => {
@@ -336,10 +504,55 @@
                 updateUI();
                 updateChart();
                 document.getElementById('currentTick').textContent = data.tick;
+                
+                // Actualizar ciclo económico
+                if (data.cycle) {
+                    const cycleElement = document.getElementById('economicCycle');
+                    cycleElement.textContent = data.cycle;
+                    cycleElement.className = `cycle-${data.cycle}`;
+                }
+                
+                // Actualizar analytics si están disponibles
+                if (data.analytics) {
+                    updateAnalyticsDisplay(data.analytics);
+                }
+                
+                // Mostrar eventos de mercado
+                if (data.event) {
+                    addActivityLog(`🌍 Evento: ${data.event.name} afecta ${data.resource || data.event.resource}`, 'market-event');
+                }
+                
+                // Mostrar eventos recientes
+                if (data.marketEvents) {
+                    data.marketEvents.forEach(event => {
+                        if (!activityLog.find(log => log.tick === event.tick && log.type === event.type)) {
+                            addActivityLog(`📈 ${event.name} en ${event.resource}`, 'market-event');
+                        }
+                    });
+                }
             });
 
             socket.on('leaderboard', (leaderboardData) => {
                 updateLeaderboardDisplay(leaderboardData);
+            });
+
+            socket.on('bot_action', (data) => {
+                addActivityLog(`🤖 ${data.botName}: ${data.action} ${data.quantity} ${data.resource} (${data.price})`, 'bot-action');
+                gameData.market = data.market;
+                updateMarketDisplay();
+            });
+
+            socket.on('cartel_alert', (data) => {
+                const message = `🚨 CARTEL DETECTADO: ${data.resource} (${(data.riskScore * 100).toFixed(1)}% riesgo)`;
+                addActivityLog(message, 'cartel-alert');
+                showNotification(message, 'error');
+                updateCartelAlerts();
+            });
+
+            socket.on('market_analytics', (data) => {
+                if (data.report) {
+                    updateAnalyticsDisplay(data);
+                }
             });
         }
 
@@ -461,11 +674,17 @@
                 const item = document.createElement('div');
                 item.className = 'leaderboard-item';
                 item.innerHTML = `
-                    <span>#${index + 1} ${player.name}</span>
-                    <span>$${player.netWorth}</span>
+                    <span>#${index + 1} ${player.name}${player.isBot ? '<span class="bot-indicator">BOT</span>' : ''}</span>
+                    <span>${player.netWorth}</span>
                 `;
                 leaderboardList.appendChild(item);
             });
+            
+            // Actualizar contadores
+            const humanCount = leaderboard.filter(p => !p.isBot).length;
+            const botCount = leaderboard.filter(p => p.isBot).length;
+            document.getElementById('playerCount').textContent = humanCount;
+            document.getElementById('botCount').textContent = botCount;
         }
 
         // Inicializar gráfica
@@ -533,6 +752,83 @@
                 notification.style.display = 'none';
             }, 3000);
         }
+
+        // Agregar entrada al log de actividad
+        function addActivityLog(message, type) {
+            const timestamp = new Date().toLocaleTimeString();
+            activityLog.unshift({ message, type, timestamp, tick: gameData.tick });
+            
+            // Mantener solo las últimas 20 entradas
+            if (activityLog.length > 20) {
+                activityLog.pop();
+            }
+            
+            updateActivityFeed();
+        }
+
+        // Actualizar feed de actividad
+        function updateActivityFeed() {
+            const activityFeed = document.getElementById('activityFeed');
+            activityFeed.innerHTML = '';
+            
+            activityLog.slice(0, 10).forEach(entry => {
+                const item = document.createElement('div');
+                item.className = `activity-item ${entry.type}`;
+                item.innerHTML = `
+                    <span class="event-badge">${entry.timestamp}</span>
+                    ${entry.message}
+                `;
+                activityFeed.appendChild(item);
+            });
+        }
+
+        // Actualizar analytics
+        function updateAnalytics() {
+            console.log('Solicitando analytics...'); // Debug
+            socket.emit('get_market_analytics');
+        }
+
+        // Mostrar analytics
+        function updateAnalyticsDisplay(analytics) {
+            console.log('Analytics recibidos:', analytics); // Debug
+            
+            if (analytics.marketTrend) {
+                const trendElement = document.getElementById('marketTrend');
+                if (trendElement) {
+                    trendElement.textContent = analytics.marketTrend;
+                    trendElement.className = `trend-indicator trend-${analytics.marketTrend}`;
+                }
+            }
+            
+            if (analytics.riskLevel) {
+                const riskElement = document.getElementById('riskLevel');
+                if (riskElement) {
+                    riskElement.textContent = analytics.riskLevel;
+                    riskElement.className = `risk-${analytics.riskLevel}`;
+                }
+            }
+            
+            if (analytics.cartelAlerts !== undefined) {
+                const cartelElement = document.getElementById('cartelCount');
+                if (cartelElement) {
+                    cartelElement.textContent = analytics.cartelAlerts;
+                }
+            }
+        }
+
+        // Actualizar alertas de carteles
+        function updateCartelAlerts() {
+            // Esta función se puede expandir para mostrar alertas específicas
+            socket.emit('get_market_analytics');
+        }
+
+        // Auto-actualizar analytics cada 60 segundos
+        // Auto-actualizar analytics cada 60 segundos
+        setInterval(() => {
+            if (socket && socket.connected) {
+                updateAnalytics();
+            }
+        }, 60000);
 
         // Auto-actualizar leaderboard cada 30 segundos
         setInterval(() => {

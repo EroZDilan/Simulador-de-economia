@@ -1,31 +1,52 @@
 {
-  "name": "simulador-de-economia",
+  "name": "simulador-economia-multiplayer",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Simulador económico en tiempo real con IA y multiplayer",
+  "main": "server/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server/app.js",
-    "dev": "concurrently \"nodemon server/app.js\" \"npx http-server client -p 3001\"",
+    "dev": "concurrently \"nodemon server/app.js\" \"npx http-server client -p 3001 -c-1\"",
     "server": "nodemon server/app.js",
-    "client": "npx http-server client -p 3001"
+    "client": "npx http-server client -p 3001 -c-1",
+    "init-db": "node server/init-database.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "description": "",
+  "keywords": [
+    "economia",
+    "simulador",
+    "multiplayer",
+    "trading",
+    "bots",
+    "ai",
+    "behavioral-economics",
+    "game-theory",
+    "market-simulation"
+  ],
+  "author": "Tu Nombre <tu.email@ejemplo.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tuusuario/simulador-economia.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tuusuario/simulador-economia/issues"
+  },
+  "homepage": "https://github.com/tuusuario/simulador-economia#readme",
   "dependencies": {
-    "chart.js": "^4.4.9",
     "cors": "^2.8.5",
-    "express": "^5.1.0",
+    "express": "^4.18.2",
     "lodash": "^4.17.21",
-    "sequelize": "^6.37.7",
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1",
-    "sqlite3": "^5.1.7",
-    "uuid": "^11.1.0"
+    "sequelize": "^6.32.1",
+    "socket.io": "^4.7.2",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
