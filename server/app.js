@@ -1,22 +1,16 @@
-// server/app.js
+// server/app-final.js - Versión Final Limpia y Estable
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
-const { EconomicBot, BotFactory } = require('./bots');
-const { DatabaseManager, Player, Transaction, PriceHistory, MarketEvent } = require('./models');
-const { MarketAnalytics } = require('./analytics');
-const constants = require('../shared/constants');
+const { v4: uuidv4 } = require('uuid');
 
-// Configuración básica
+// Configuración
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
 const PORT = process.env.PORT || 3000;
@@ -26,41 +20,46 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../client')));
 
-// Instancia de analytics
-const marketAnalytics = new MarketAnalytics();
-
-// Estado del juego (en memoria)
+// Estado del juego
 const gameState = {
     players: new Map(),
     bots: new Map(),
-    resources: Object.keys(constants.RESOURCES),
-    market: JSON.parse(JSON.stringify(constants.INITIAL_MARKET)),
+    resources: ['agua', 'comida', 'energia', 'materiales'],
+    market: {
+        agua: { price: 10, supply: 1000, demand: 800 },
+        comida: { price: 15, supply: 800, demand: 900 },
+        energia: { price: 20, supply: 600, demand: 700 },
+        materiales: { price: 25, supply: 500, demand: 600 }
+    },
     tick: 0,
     marketEvents: [],
     economicCycle: 'expansion',
     cycleCounter: 0,
     analytics: {
-        lastReport: null,
+        lastReport: {
+            marketTrend: 'neutral',
+            riskLevel: 'medium',
+            cartelAlerts: 0,
+            timestamp: Date.now()
+        },
         cartelAlerts: [],
         riskLevel: 'medium'
     }
 };
 
-// Clase GamePlayer (para evitar conflicto con models.js)
+// Clase Player
 class GamePlayer {
     constructor(id, name) {
         this.id = id;
         this.name = name;
-        this.money = constants.GAME_CONFIG.INITIAL_MONEY;
-        this.inventory = { ...constants.GAME_CONFIG.INITIAL_INVENTORY };
-        this.score = 0;
+        this.money = 1000;
+        this.inventory = { agua: 50, comida: 30, energia: 20, materiales: 10 };
         this.transactions = [];
         this.isBot = false;
         this.statistics = {
             totalProfit: 0,
             totalVolume: 0,
             successfulTrades: 0,
-            bestRank: 999,
             gamesPlayed: 0
         };
         this.joinedAt = Date.now();
@@ -69,18 +68,20 @@ class GamePlayer {
     getNetWorth() {
         let inventoryValue = 0;
         for (let resource in this.inventory) {
-            inventoryValue += this.inventory[resource] * gameState.market[resource].price;
+            if (gameState.market[resource]) {
+                inventoryValue += this.inventory[resource] * gameState.market[resource].price;
+            }
         }
         return this.money + inventoryValue;
     }
 
-    async buy(resource, quantity) {
+    buy(resource, quantity) {
         const market = gameState.market[resource];
+        if (!market) return false;
+        
         const totalCost = market.price * quantity;
         
-        if (this.money >= totalCost && market.supply >= quantity && 
-            quantity <= constants.SYSTEM_LIMITS.MAX_TRANSACTION_SIZE) {
-            
+        if (this.money >= totalCost && market.supply >= quantity && quantity > 0) {
             this.money -= totalCost;
             this.inventory[resource] += quantity;
             market.supply -= quantity;
@@ -93,283 +94,439 @@ class GamePlayer {
                 price: market.price,
                 totalValue: totalCost,
                 timestamp: Date.now(),
-                tick: gameState.tick,
-                profit: 0
+                tick: gameState.tick
             };
             
             this.transactions.push(transaction);
             this.statistics.totalVolume += totalCost;
             
-            // Guardar en base de datos
-            await DatabaseManager.saveTransaction(this.id, transaction);
-            
             return true;
         }
         return false;
     }
 
-    async sell(resource, quantity) {
-        const market = gameState.market[resource];
-        
-        if (this.inventory[resource] >= quantity && 
-            quantity <= constants.SYSTEM_LIMITS.MAX_TRANSACTION_SIZE) {
-            
-            const totalRevenue = market.price * quantity;
-            
-            // Calcular profit basado en compras anteriores
-            const buyTransactions = this.transactions
-                .filter(t => t.type === 'buy' && t.resource === resource)
-                .sort((a, b) => a.timestamp - b.timestamp);
-            
-            let remainingQuantity = quantity;
-            let totalCost = 0;
-            
-            for (let buyTx of buyTransactions) {
-                if (remainingQuantity <= 0) break;
-                const useQuantity = Math.min(remainingQuantity, buyTx.quantity);
-                totalCost += useQuantity * buyTx.price;
-                remainingQuantity -= useQuantity;
-            }
-            
-            const profit = totalRevenue - totalCost;
-            
-            this.money += totalRevenue;
-            this.inventory[resource] -= quantity;
-            market.supply += quantity;
-            market.demand -= Math.floor(quantity * 0.1);
-            
-            const transaction = {
-                type: 'sell',
-                resource: resource,
-                quantity: quantity,
-                price: market.price,
-                totalValue: totalRevenue,
-                timestamp: Date.now(),
-                tick: gameState.tick,
-                profit: profit
-            };
-            
-            this.transactions.push(transaction);
-            this.statistics.totalVolume += totalRevenue;
-            this.statistics.totalProfit += profit;
-            
-            if (profit > 0) {
-                this.statistics.successfulTrades++;
-            }
-            
-            // Guardar en base de datos
-            await DatabaseManager.saveTransaction(this.id, transaction);
-            
-            return true;
+    sell(resource, quantity) {
+        if (!this.inventory[resource] || this.inventory[resource] < quantity || quantity <= 0) {
+            return false;
         }
-        return false;
+        
+        const market = gameState.market[resource];
+        const totalRevenue = market.price * quantity;
+        
+        // Calcular profit básico
+        const avgCost = this.transactions
+            .filter(t => t.type === 'buy' && t.resource === resource)
+            .reduce((sum, t, _, arr) => sum + t.price / arr.length, 0) || market.price;
+        
+        const profit = (market.price - avgCost) * quantity;
+        
+        this.money += totalRevenue;
+        this.inventory[resource] -= quantity;
+        market.supply += quantity;
+        market.demand -= Math.floor(quantity * 0.1);
+        
+        const transaction = {
+            type: 'sell',
+            resource: resource,
+            quantity: quantity,
+            price: market.price,
+            totalValue: totalRevenue,
+            timestamp: Date.now(),
+            tick: gameState.tick,
+            profit: profit
+        };
+        
+        this.transactions.push(transaction);
+        this.statistics.totalVolume += totalRevenue;
+        this.statistics.totalProfit += profit;
+        
+        if (profit > 0) {
+            this.statistics.successfulTrades++;
+        }
+        
+        return true;
     }
 }
 
-// Inicializar bots mejorado
+// Bot inteligente
+class SmartBot extends GamePlayer {
+    constructor(name, strategy = 'balanced') {
+        super(`bot_${uuidv4()}`, name);
+        this.isBot = true;
+        this.strategy = strategy;
+        this.lastAction = Date.now();
+        this.patience = Math.random() * 15000 + 5000; // 5-20 segundos
+        this.personality = {
+            riskTolerance: Math.random(),
+            greed: Math.random() * 0.5 + 0.25,
+            patience: Math.random() * 0.8 + 0.2
+        };
+        this.priceMemory = {};
+    }
+
+    updatePriceMemory() {
+        for (let resource in gameState.market) {
+            if (!this.priceMemory[resource]) {
+                this.priceMemory[resource] = [];
+            }
+            this.priceMemory[resource].push(gameState.market[resource].price);
+            if (this.priceMemory[resource].length > 10) {
+                this.priceMemory[resource].shift();
+            }
+        }
+    }
+
+    decideAction() {
+        if (Date.now() - this.lastAction < this.patience) {
+            return null;
+        }
+
+        this.updatePriceMemory();
+        
+        const resources = Object.keys(gameState.market);
+        const resource = resources[Math.floor(Math.random() * resources.length)];
+        const market = gameState.market[resource];
+        
+        // Estrategia basada en tipo de bot
+        const ratio = market.demand / market.supply;
+        
+        switch (this.strategy) {
+            case 'aggressive':
+                if (ratio > 1.1 && this.money > market.price * 15) {
+                    return {
+                        action: 'buy',
+                        resource: resource,
+                        quantity: Math.min(25, Math.floor(this.money * 0.4 / market.price))
+                    };
+                } else if (ratio < 0.9 && this.inventory[resource] > 10) {
+                    return {
+                        action: 'sell',
+                        resource: resource,
+                        quantity: Math.min(20, Math.floor(this.inventory[resource] * 0.6))
+                    };
+                }
+                break;
+                
+            case 'conservative':
+                if (ratio > 1.3 && this.money > market.price * 20) {
+                    return {
+                        action: 'buy',
+                        resource: resource,
+                        quantity: Math.min(10, Math.floor(this.money * 0.2 / market.price))
+                    };
+                } else if (ratio < 0.7 && this.inventory[resource] > 15) {
+                    return {
+                        action: 'sell',
+                        resource: resource,
+                        quantity: Math.min(8, Math.floor(this.inventory[resource] * 0.3))
+                    };
+                }
+                break;
+                
+            case 'contrarian':
+                const prices = this.priceMemory[resource] || [market.price];
+                if (prices.length >= 3) {
+                    const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+                    
+                    if (market.price < avgPrice * 0.9 && this.money > market.price * 10) {
+                        return {
+                            action: 'buy',
+                            resource: resource,
+                            quantity: Math.min(15, Math.floor(this.money * 0.3 / market.price))
+                        };
+                    } else if (market.price > avgPrice * 1.1 && this.inventory[resource] > 8) {
+                        return {
+                            action: 'sell',
+                            resource: resource,
+                            quantity: Math.min(12, Math.floor(this.inventory[resource] * 0.4))
+                        };
+                    }
+                }
+                break;
+                
+            case 'arbitrageur':
+                if (ratio > 1.2 && this.money > market.price * 12) {
+                    return {
+                        action: 'buy',
+                        resource: resource,
+                        quantity: Math.min(18, Math.floor(this.money * 0.35 / market.price))
+                    };
+                } else if (ratio < 0.8 && this.inventory[resource] > 12) {
+                    return {
+                        action: 'sell',
+                        resource: resource,
+                        quantity: Math.min(15, Math.floor(this.inventory[resource] * 0.5))
+                    };
+                }
+                break;
+                
+            case 'hoarder':
+                const favoriteResource = ['agua', 'comida', 'energia', 'materiales'][
+                    Math.floor(this.personality.greed * 4)
+                ];
+                
+                if (resource === favoriteResource) {
+                    if (this.money > market.price * 8) {
+                        return {
+                            action: 'buy',
+                            resource: resource,
+                            quantity: Math.min(22, Math.floor(this.money * 0.5 / market.price))
+                        };
+                    }
+                } else if (this.inventory[resource] > 20) {
+                    return {
+                        action: 'sell',
+                        resource: resource,
+                        quantity: Math.min(10, Math.floor(this.inventory[resource] * 0.4))
+                    };
+                }
+                break;
+                
+            default: // balanced
+                if (ratio > 1.15 && this.money > market.price * 12) {
+                    return {
+                        action: 'buy',
+                        resource: resource,
+                        quantity: Math.min(15, Math.floor(this.money * 0.3 / market.price))
+                    };
+                } else if (ratio < 0.85 && this.inventory[resource] > 10) {
+                    return {
+                        action: 'sell',
+                        resource: resource,
+                        quantity: Math.min(12, Math.floor(this.inventory[resource] * 0.4))
+                    };
+                }
+                break;
+        }
+        
+        return null;
+    }
+
+    executeAction() {
+        const action = this.decideAction();
+        if (!action) return false;
+
+        let success = false;
+        if (action.action === 'buy') {
+            success = this.buy(action.resource, action.quantity);
+        } else if (action.action === 'sell') {
+            success = this.sell(action.resource, action.quantity);
+        }
+
+        if (success) {
+            this.lastAction = Date.now();
+            this.patience = Math.random() * 15000 + 5000;
+            
+            console.log(`🤖 ${this.name}: ${action.action} ${action.quantity} ${action.resource} at $${gameState.market[action.resource].price}`);
+            
+            // Notificar a clientes
+            io.emit('bot_action', {
+                botName: this.name,
+                action: action.action,
+                resource: action.resource,
+                quantity: action.quantity,
+                price: gameState.market[action.resource].price,
+                market: gameState.market
+            });
+        }
+
+        return success;
+    }
+}
+
+// Crear bots
 function initializeBots() {
     const botConfigs = [
-        { type: 'conservative', name: 'Warren_Bot' },
-        { type: 'aggressive', name: 'Wolf_Bot' },
-        { type: 'contrarian', name: 'Contra_Bot' },
-        { type: 'arbitrageur', name: 'Arbit_Bot' },
-        { type: 'hoarder', name: 'Dragon_Bot' },
-        { type: 'balanced', name: 'Zen_Bot' }
+        { name: 'Warren_Bot', strategy: 'conservative' },
+        { name: 'Wolf_Bot', strategy: 'aggressive' },
+        { name: 'Contra_Bot', strategy: 'contrarian' },
+        { name: 'Arbit_Bot', strategy: 'arbitrageur' },
+        { name: 'Dragon_Bot', strategy: 'hoarder' },
+        { name: 'Zen_Bot', strategy: 'balanced' }
     ];
     
     botConfigs.forEach(config => {
-        const bot = BotFactory.createBot(config.type, config.name);
+        const bot = new SmartBot(config.name, config.strategy);
         gameState.bots.set(bot.id, bot);
         console.log(`🤖 Bot creado: ${bot.name} (${bot.strategy})`);
     });
 }
 
-// Lógica de bots mejorada
-async function runBotActions() {
-    const allPlayers = new Map([...gameState.players, ...gameState.bots]);
-    
-    for (const [botId, bot] of gameState.bots) {
+// Ejecutar acciones de bots
+function runBotActions() {
+    gameState.bots.forEach(bot => {
         try {
-            const action = bot.decideAction(gameState.market, allPlayers);
-            if (action) {
-                const success = bot.executeTransaction(action, gameState.market);
-                if (success) {
-                    await updateMarketPrices(action.resource);
-                    
-                    // Guardar transacción del bot
-                    await DatabaseManager.saveTransaction(botId, {
-                        type: action.action,
-                        resource: action.resource,
-                        quantity: action.quantity,
-                        price: gameState.market[action.resource].price,
-                        totalValue: action.quantity * gameState.market[action.resource].price,
-                        tick: gameState.tick,
-                        profit: action.action === 'sell' ? action.quantity * 0.1 : 0
-                    });
-                    
-                    console.log(`🤖 ${bot.name}: ${action.action} ${action.quantity} ${action.resource} at $${gameState.market[action.resource].price}`);
-                    
-                    // Notificar a clientes
-                    io.emit('bot_action', {
-                        botName: bot.name,
-                        action: action.action,
-                        resource: action.resource,
-                        quantity: action.quantity,
-                        price: gameState.market[action.resource].price,
-                        market: gameState.market
-                    });
-                }
-            }
+            bot.executeAction();
         } catch (error) {
-            console.error(`Error en bot ${bot.name}:`, error);
+            console.error(`❌ Error en bot ${bot.name}:`, error.message);
         }
+    });
+}
+
+// Actualizar precios de mercado
+function updateMarketPrices() {
+    for (let resource of gameState.resources) {
+        const market = gameState.market[resource];
+        
+        // Algoritmo de precios
+        const ratio = market.demand / market.supply;
+        const baseChange = (ratio - 1) * 0.08; // 8% máximo
+        
+        // Añadir volatilidad
+        const volatility = (Math.random() - 0.5) * 0.04; // ±2%
+        const priceChange = baseChange + volatility;
+        
+        market.price = Math.max(1, Math.round(market.price * (1 + priceChange)));
+        
+        // Regeneración natural
+        market.supply += Math.floor(Math.random() * 25) - 10;
+        market.demand += Math.floor(Math.random() * 30) - 15;
+        
+        // Límites
+        market.supply = Math.max(100, Math.min(3000, market.supply));
+        market.demand = Math.max(100, Math.min(3000, market.demand));
     }
 }
 
-// Función mejorada para actualizar precios
-async function updateMarketPrices(resource) {
-    const market = gameState.market[resource];
-    const resourceConfig = constants.RESOURCES[resource];
+// Generar eventos de mercado
+function generateMarketEvent() {
+    const events = [
+        { type: 'drought', name: 'Sequía', resource: 'agua', supply: -0.2, demand: 0.15 },
+        { type: 'harvest', name: 'Gran Cosecha', resource: 'comida', supply: 0.3, demand: -0.1 },
+        { type: 'blackout', name: 'Apagón', resource: 'energia', supply: -0.15, demand: 0.2 },
+        { type: 'discovery', name: 'Nuevo Yacimiento', resource: 'materiales', supply: 0.25, demand: 0.05 },
+        { type: 'innovation', name: 'Innovación', resource: 'energia', supply: 0.15, demand: -0.1 }
+    ];
     
-    // Algoritmo mejorado de oferta y demanda
-    const ratio = market.demand / market.supply;
-    const baseChange = (ratio - 1) * 0.1;
-    
-    // Aplicar volatilidad específica del recurso
-    const volatilityFactor = 1 + (Math.random() - 0.5) * resourceConfig.volatility;
-    const priceChange = baseChange * volatilityFactor;
-    
-    // Aplicar efectos del ciclo económico
-    const cycleEffects = constants.ECONOMIC_CYCLES[gameState.economicCycle.toUpperCase()];
-    const cycleFactor = cycleEffects ? cycleEffects.effects.priceVolatility : 1;
-    
-    market.price = Math.max(
-        constants.SYSTEM_LIMITS.MIN_PRICE,
-        Math.min(
-            constants.SYSTEM_LIMITS.MAX_PRICE,
-            Math.round(market.price * (1 + priceChange * cycleFactor))
-        )
-    );
-    
-    // Regeneración natural ajustada por ciclo económico
-    const supplyMultiplier = cycleEffects ? cycleEffects.effects.supplyMultiplier : 1;
-    const demandMultiplier = cycleEffects ? cycleEffects.effects.demandMultiplier : 1;
-    
-    market.supply = Math.min(
-        constants.SYSTEM_LIMITS.MAX_SUPPLY,
-        Math.max(
-            constants.SYSTEM_LIMITS.MIN_SUPPLY,
-            Math.floor(market.supply + (Math.random() * 20 - 5) * supplyMultiplier)
-        )
-    );
-    
-    market.demand = Math.min(
-        constants.SYSTEM_LIMITS.MAX_DEMAND,
-        Math.max(
-            constants.SYSTEM_LIMITS.MIN_DEMAND,
-            Math.floor(market.demand + (Math.random() * 30 - 15) * demandMultiplier)
-        )
-    );
-    
-    // Guardar historial de precios
-    await DatabaseManager.savePriceHistory(
-        { [resource]: market },
-        gameState.tick,
-        gameState.economicCycle
-    );
-}
-
-// Generar eventos de mercado mejorado
-async function generateMarketEvent() {
-    const eventTypes = Object.values(constants.MARKET_EVENTS);
-    const totalProbability = eventTypes.reduce((sum, event) => sum + event.probability, 0);
-    
-    if (Math.random() < totalProbability) {
-        const randomValue = Math.random() * totalProbability;
-        let cumulativeProbability = 0;
+    if (Math.random() < 0.25) { // 25% probabilidad
+        const event = events[Math.floor(Math.random() * events.length)];
+        const market = gameState.market[event.resource];
         
-        for (let eventConfig of eventTypes) {
-            cumulativeProbability += eventConfig.probability;
-            if (randomValue <= cumulativeProbability) {
-                
-                const selectedResource = eventConfig.resources[
-                    Math.floor(Math.random() * eventConfig.resources.length)
-                ];
-                
-                const severity = eventConfig.severity.min + 
-                    Math.random() * (eventConfig.severity.max - eventConfig.severity.min);
-                
-                const market = gameState.market[selectedResource];
-                const effects = eventConfig.effects;
-                
-                market.supply = Math.max(
-                    constants.SYSTEM_LIMITS.MIN_SUPPLY,
-                    Math.floor(market.supply * (1 + effects.supply * severity))
-                );
-                market.demand = Math.max(
-                    constants.SYSTEM_LIMITS.MIN_DEMAND,
-                    Math.floor(market.demand * (1 + effects.demand * severity))
-                );
-                
-                const event = {
-                    type: eventConfig.type,
-                    name: eventConfig.name,
-                    description: eventConfig.description,
-                    resource: selectedResource,
-                    severity: severity,
-                    tick: gameState.tick,
-                    timestamp: Date.now()
-                };
-                
-                gameState.marketEvents.push(event);
-                
-                // Guardar evento en base de datos
-                await DatabaseManager.saveMarketEvent(event, gameState.tick);
-                
-                // Limpiar eventos viejos
-                if (gameState.marketEvents.length > 10) {
-                    gameState.marketEvents.shift();
-                }
-                
-                return event;
-            }
+        market.supply = Math.floor(market.supply * (1 + event.supply));
+        market.demand = Math.floor(market.demand * (1 + event.demand));
+        
+        // Asegurar límites
+        market.supply = Math.max(100, Math.min(3000, market.supply));
+        market.demand = Math.max(100, Math.min(3000, market.demand));
+        
+        gameState.marketEvents.push({
+            ...event,
+            tick: gameState.tick,
+            timestamp: Date.now()
+        });
+        
+        // Limpiar eventos viejos
+        if (gameState.marketEvents.length > 8) {
+            gameState.marketEvents.shift();
         }
+        
+        return event;
     }
     
     return null;
 }
 
-// Simulación económica principal
-async function economicTick() {
+// Simular ciclos económicos
+function simulateEconomicCycle() {
+    gameState.cycleCounter++;
+    
+    if (gameState.cycleCounter >= 12) { // Cambiar cada 12 ticks
+        const cycles = ['expansion', 'peak', 'contraction', 'trough'];
+        const currentIndex = cycles.indexOf(gameState.economicCycle);
+        gameState.economicCycle = cycles[(currentIndex + 1) % cycles.length];
+        gameState.cycleCounter = 0;
+        
+        console.log(`🔄 Cambio de ciclo: ${gameState.economicCycle}`);
+        
+        // Aplicar efectos del ciclo
+        const effects = {
+            expansion: { supply: 1.05, demand: 1.1 },
+            peak: { supply: 1.0, demand: 1.15 },
+            contraction: { supply: 0.95, demand: 0.9 },
+            trough: { supply: 0.9, demand: 0.85 }
+        };
+        
+        const effect = effects[gameState.economicCycle];
+        for (let resource of gameState.resources) {
+            const market = gameState.market[resource];
+            market.supply = Math.floor(market.supply * effect.supply);
+            market.demand = Math.floor(market.demand * effect.demand);
+        }
+    }
+}
+
+// Analytics básicos
+function runMarketAnalysis() {
+    try {
+        // Calcular tendencia basada en precios
+        let totalPriceChange = 0;
+        const basePrices = { agua: 10, comida: 15, energia: 20, materiales: 25 };
+        
+        for (let resource of gameState.resources) {
+            const currentPrice = gameState.market[resource].price;
+            const basePrice = basePrices[resource];
+            totalPriceChange += (currentPrice - basePrice) / basePrice;
+        }
+        
+        const avgChange = totalPriceChange / gameState.resources.length;
+        let marketTrend = 'neutral';
+        if (avgChange > 0.15) marketTrend = 'bullish';
+        else if (avgChange < -0.15) marketTrend = 'bearish';
+        
+        // Calcular riesgo basado en volatilidad
+        const volatilities = gameState.resources.map(resource => {
+            const market = gameState.market[resource];
+            const ratio = market.demand / market.supply;
+            return Math.abs(ratio - 1);
+        });
+        
+        const avgVolatility = volatilities.reduce((a, b) => a + b, 0) / volatilities.length;
+        let riskLevel = 'medium';
+        if (avgVolatility < 0.2) riskLevel = 'low';
+        else if (avgVolatility < 0.4) riskLevel = 'medium';
+        else if (avgVolatility < 0.6) riskLevel = 'high';
+        else riskLevel = 'extreme';
+        
+        gameState.analytics.lastReport = {
+            marketTrend: marketTrend,
+            riskLevel: riskLevel,
+            cartelAlerts: 0,
+            timestamp: Date.now()
+        };
+        
+        gameState.analytics.riskLevel = riskLevel;
+        
+        console.log(`📊 Analytics: Tendencia ${marketTrend}, Riesgo ${riskLevel}`);
+        
+    } catch (error) {
+        console.error('❌ Error en análisis:', error.message);
+    }
+}
+
+// Tick económico principal
+function economicTick() {
     try {
         gameState.tick++;
         console.log(`\n📊 === TICK ECONÓMICO #${gameState.tick} ===`);
         
-        // 1. Ejecutar acciones de bots
-        await runBotActions();
+        // 1. Ejecutar bots
+        runBotActions();
         
-        // 2. Generar eventos aleatorios
-        const event = await generateMarketEvent();
+        // 2. Generar eventos
+        const event = generateMarketEvent();
         
-        // 3. Actualizar mercado naturalmente
-        for (let resource of gameState.resources) {
-            await updateMarketPrices(resource);
+        // 3. Actualizar mercado
+        updateMarketPrices();
+        
+        // 4. Simular ciclos
+        simulateEconomicCycle();
+        
+        // 5. Ejecutar analytics cada 3 ticks
+        if (gameState.tick % 3 === 0) {
+            runMarketAnalysis();
         }
         
-        // 4. Simular ciclos económicos
-        await simulateEconomicCycle();
-        
-        // 5. Ejecutar análisis de mercado cada 5 ticks
-        if (gameState.tick % 5 === 0) {
-            await runMarketAnalysis();
-        }
-        
-        // 6. Detectar carteles cada 10 ticks
-        if (gameState.tick % 10 === 0) {
-            await runCartelDetection();
-        }
-        
-        // 7. Enviar actualizaciones a clientes
+        // 6. Enviar actualizaciones
         const tickData = {
             tick: gameState.tick,
             market: gameState.market,
@@ -377,7 +534,7 @@ async function economicTick() {
             cycle: gameState.economicCycle,
             marketEvents: gameState.marketEvents.slice(-3),
             analytics: gameState.analytics.lastReport ? {
-                marketTrend: gameState.analytics.lastReport.marketOverview.marketTrend,
+                marketTrend: gameState.analytics.lastReport.marketTrend,
                 riskLevel: gameState.analytics.riskLevel,
                 cartelAlerts: gameState.analytics.cartelAlerts.length
             } : null
@@ -385,12 +542,13 @@ async function economicTick() {
         
         io.emit('economic_tick', tickData);
         
-        // Log del estado del mercado
-        console.log(`💰 Precios: ${Object.entries(gameState.market)
-            .map(([r, m]) => `${r}:$${m.price}`).join(', ')}`);
+        // Log del estado
+        const prices = gameState.resources.map(r => `${r}:$${gameState.market[r].price}`).join(', ');
+        console.log(`💰 Precios: ${prices}`);
         console.log(`📈 Ciclo: ${gameState.economicCycle} | Jugadores: ${gameState.players.size} | Bots: ${gameState.bots.size}`);
+        
         if (event) {
-            console.log(`🌍 Evento: ${event.name} afecta ${event.resource} (severidad: ${event.severity.toFixed(2)})`);
+            console.log(`🌍 Evento: ${event.name} afecta ${event.resource}`);
         }
         
     } catch (error) {
@@ -398,149 +556,14 @@ async function economicTick() {
     }
 }
 
-// Ejecutar análisis de mercado
-async function runMarketAnalysis() {
-    try {
-        console.log('📊 Ejecutando análisis de mercado...');
-        
-        // Calcular indicadores técnicos para todos los recursos
-        for (let resource of gameState.resources) {
-            await marketAnalytics.calculateTechnicalIndicators(resource);
-            await marketAnalytics.generateMarketPredictions(resource);
-        }
-        
-        // Calcular métricas de riesgo
-        await marketAnalytics.calculateRiskMetrics();
-        
-        // Generar reporte completo
-        const report = await marketAnalytics.generateMarketReport();
-        if (report) {
-            gameState.analytics.lastReport = report;
-            
-            // Determinar nivel de riesgo general
-            const volatilities = Object.values(report.riskAssessment)
-                .map(risk => risk.volatility || 0);
-            const avgVolatility = volatilities.reduce((a, b) => a + b, 0) / volatilities.length;
-            
-            if (avgVolatility < 0.2) gameState.analytics.riskLevel = 'low';
-            else if (avgVolatility < 0.4) gameState.analytics.riskLevel = 'medium';
-            else if (avgVolatility < 0.6) gameState.analytics.riskLevel = 'high';
-            else gameState.analytics.riskLevel = 'extreme';
-            
-            console.log(`📊 Análisis completado - Riesgo: ${gameState.analytics.riskLevel}`);
-        }
-        
-    } catch (error) {
-        console.error('❌ Error en análisis de mercado:', error);
-    }
-}
-
-// Ejecutar detección de carteles
-async function runCartelDetection() {
-    try {
-        console.log('🕵️ Ejecutando detección de carteles...');
-        
-        const cartelSignals = await marketAnalytics.detectCartelActivity();
-        gameState.analytics.cartelAlerts = [];
-        
-        for (let [resource, signals] of Object.entries(cartelSignals)) {
-            if (signals.riskScore > constants.CARTEL_DETECTION.THRESHOLDS.overallRisk) {
-                const alert = {
-                    resource: resource,
-                    riskScore: signals.riskScore,
-                    timestamp: Date.now(),
-                    tick: gameState.tick,
-                    details: signals
-                };
-                
-                gameState.analytics.cartelAlerts.push(alert);
-                
-                console.log(`🚨 ALERTA DE CARTEL: ${resource} (riesgo: ${(signals.riskScore * 100).toFixed(1)}%)`);
-                
-                // Notificar a clientes
-                io.emit('cartel_alert', alert);
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Error en detección de carteles:', error);
-    }
-}
-
-// Simular ciclos económicos
-async function simulateEconomicCycle() {
-    gameState.cycleCounter++;
-    
-    const currentCycleConfig = constants.ECONOMIC_CYCLES[gameState.economicCycle.toUpperCase()];
-    if (!currentCycleConfig) return;
-    
-    const minDuration = currentCycleConfig.duration.min;
-    const maxDuration = currentCycleConfig.duration.max;
-    const cycleDuration = minDuration + Math.floor(Math.random() * (maxDuration - minDuration + 1));
-    
-    if (gameState.cycleCounter >= cycleDuration) {
-        const nextCycles = currentCycleConfig.nextCycles;
-        const nextCycle = nextCycles[Math.floor(Math.random() * nextCycles.length)];
-        
-        console.log(`🔄 Cambio de ciclo: ${gameState.economicCycle} → ${nextCycle}`);
-        
-        gameState.economicCycle = nextCycle;
-        gameState.cycleCounter = 0;
-        
-        // Aplicar efectos inmediatos del nuevo ciclo
-        await applyEconomicCycleEffects();
-        
-        // Notificar cambio de ciclo
-        io.emit('cycle_change', {
-            oldCycle: gameState.economicCycle,
-            newCycle: nextCycle,
-            tick: gameState.tick
-        });
-    }
-}
-
-// Aplicar efectos de ciclos económicos
-async function applyEconomicCycleEffects() {
-    const effects = constants.ECONOMIC_CYCLES[gameState.economicCycle.toUpperCase()];
-    if (!effects) return;
-    
-    console.log(`📊 Aplicando efectos del ciclo ${gameState.economicCycle}`);
-    
-    for (let resource of gameState.resources) {
-        const market = gameState.market[resource];
-        
-        market.supply = Math.floor(market.supply * effects.effects.supplyMultiplier);
-        market.demand = Math.floor(market.demand * effects.effects.demandMultiplier);
-        
-        // Asegurar límites
-        market.supply = Math.max(constants.SYSTEM_LIMITS.MIN_SUPPLY, 
-                               Math.min(constants.SYSTEM_LIMITS.MAX_SUPPLY, market.supply));
-        market.demand = Math.max(constants.SYSTEM_LIMITS.MIN_DEMAND, 
-                               Math.min(constants.SYSTEM_LIMITS.MAX_DEMAND, market.demand));
-    }
-}
-
-// Conexiones WebSocket
+// WebSocket connections
 io.on('connection', (socket) => {
     console.log(`🔌 Usuario conectado: ${socket.id}`);
 
-    // Registro de jugador
-    socket.on('register', async (playerData) => {
+    socket.on('register', (playerData) => {
         try {
             const player = new GamePlayer(socket.id, playerData.name || `Player_${socket.id.substring(0, 6)}`);
             gameState.players.set(socket.id, player);
-            
-            // Guardar jugador en base de datos
-            await Player.findOrCreate({
-                where: { id: socket.id },
-                defaults: {
-                    id: socket.id,
-                    name: player.name,
-                    money: player.money,
-                    inventory: player.inventory,
-                    isBot: false
-                }
-            });
             
             socket.emit('registered', {
                 player: player,
@@ -548,10 +571,7 @@ io.on('connection', (socket) => {
                     market: gameState.market,
                     tick: gameState.tick,
                     economicCycle: gameState.economicCycle,
-                    analytics: gameState.analytics.lastReport ? {
-                        marketTrend: gameState.analytics.lastReport.marketOverview.marketTrend,
-                        riskLevel: gameState.analytics.riskLevel
-                    } : null
+                    analytics: gameState.analytics.lastReport
                 }
             });
             
@@ -559,23 +579,25 @@ io.on('connection', (socket) => {
                 player: { id: player.id, name: player.name }
             });
             
+            // Enviar datos inmediatamente
+            setTimeout(() => {
+                socket.emit('get_leaderboard');
+                socket.emit('get_market_analytics');
+            }, 500);
+            
             console.log(`👤 Jugador registrado: ${player.name}`);
             
         } catch (error) {
-            console.error('Error registrando jugador:', error);
-            socket.emit('error', { message: 'Error al registrar jugador' });
+            console.error('❌ Error registrando jugador:', error);
+            socket.emit('error', { message: 'Error al registrar' });
         }
     });
 
-    // Manejar transacciones
-    socket.on('trade', async (tradeData) => {
+    socket.on('trade', (tradeData) => {
         try {
             const player = gameState.players.get(socket.id);
             if (!player) {
-                socket.emit('trade_result', {
-                    success: false,
-                    message: 'Jugador no encontrado'
-                });
+                socket.emit('trade_result', { success: false, message: 'Jugador no encontrado' });
                 return;
             }
 
@@ -583,31 +605,24 @@ io.on('connection', (socket) => {
             
             // Validaciones
             if (!gameState.resources.includes(resource)) {
-                socket.emit('trade_result', {
-                    success: false,
-                    message: 'Recurso no válido'
-                });
+                socket.emit('trade_result', { success: false, message: 'Recurso no válido' });
                 return;
             }
             
-            if (quantity <= 0 || quantity > constants.SYSTEM_LIMITS.MAX_TRANSACTION_SIZE) {
-                socket.emit('trade_result', {
-                    success: false,
-                    message: `Cantidad debe estar entre 1 y ${constants.SYSTEM_LIMITS.MAX_TRANSACTION_SIZE}`
-                });
+            if (quantity <= 0 || quantity > 1000) {
+                socket.emit('trade_result', { success: false, message: 'Cantidad inválida' });
                 return;
             }
 
             let success = false;
-
             if (action === 'buy') {
-                success = await player.buy(resource, quantity);
+                success = player.buy(resource, quantity);
             } else if (action === 'sell') {
-                success = await player.sell(resource, quantity);
+                success = player.sell(resource, quantity);
             }
 
             if (success) {
-                await updateMarketPrices(resource);
+                updateMarketPrices();
                 
                 socket.emit('trade_result', {
                     success: true,
@@ -618,34 +633,29 @@ io.on('connection', (socket) => {
                 
                 io.emit('market_update', gameState.market);
                 
-                console.log(`💰 ${player.name}: ${action} ${quantity} ${resource} at ${gameState.market[resource].price}`);
+                console.log(`💰 ${player.name}: ${action} ${quantity} ${resource} at $${gameState.market[resource].price}`);
                 
             } else {
-                socket.emit('trade_result', {
-                    success: false,
-                    message: action === 'buy' ? 
-                        'Fondos insuficientes o stock agotado' : 
-                        'Inventario insuficiente'
-                });
+                const message = action === 'buy' ? 
+                    'Fondos insuficientes o stock agotado' : 
+                    'Inventario insuficiente';
+                
+                socket.emit('trade_result', { success: false, message });
             }
             
         } catch (error) {
-            console.error('Error en transacción:', error);
-            socket.emit('trade_result', {
-                success: false,
-                message: 'Error interno del servidor'
-            });
+            console.error('❌ Error en transacción:', error);
+            socket.emit('trade_result', { success: false, message: 'Error interno' });
         }
     });
 
-    // Obtener leaderboard
-    socket.on('get_leaderboard', async () => {
+    socket.on('get_leaderboard', () => {
         try {
             const allPlayers = new Map([...gameState.players, ...gameState.bots]);
             const leaderboard = Array.from(allPlayers.values())
-                .map((player, index) => ({
+                .map(player => ({
                     name: player.name,
-                    netWorth: player.getNetWorth ? player.getNetWorth() : calculatePlayerNetWorth(player),
+                    netWorth: player.getNetWorth(),
                     money: player.money,
                     isBot: player.isBot || false,
                     transactions: player.transactions ? player.transactions.length : 0,
@@ -657,45 +667,34 @@ io.on('connection', (socket) => {
             socket.emit('leaderboard', leaderboard);
             
         } catch (error) {
-            console.error('Error obteniendo leaderboard:', error);
+            console.error('❌ Error obteniendo leaderboard:', error);
             socket.emit('error', { message: 'Error obteniendo leaderboard' });
         }
     });
 
-    // Obtener analytics de mercado
-    socket.on('get_market_analytics', async () => {
+    socket.on('get_market_analytics', () => {
         try {
-            const report = gameState.analytics.lastReport;
-            if (report) {
-                socket.emit('market_analytics', {
-                    report: report,
-                    cartelAlerts: gameState.analytics.cartelAlerts,
-                    riskLevel: gameState.analytics.riskLevel,
-                    lastUpdate: report.timestamp
-                });
-            } else {
-                socket.emit('market_analytics', {
-                    message: 'Analytics aún no disponible'
-                });
-            }
+            const analytics = gameState.analytics.lastReport;
+            
+            socket.emit('market_analytics', {
+                report: analytics,
+                cartelAlerts: gameState.analytics.cartelAlerts,
+                riskLevel: gameState.analytics.riskLevel,
+                lastUpdate: analytics.timestamp
+            });
+            
         } catch (error) {
-            console.error('Error obteniendo analytics:', error);
-            socket.emit('error', { message: 'Error obteniendo analytics' });
+            console.error('❌ Error obteniendo analytics:', error);
+            socket.emit('market_analytics', {
+                report: {
+                    marketTrend: 'neutral',
+                    riskLevel: 'medium',
+                    cartelAlerts: 0
+                }
+            });
         }
     });
 
-    // Obtener estadísticas de jugador
-    socket.on('get_player_stats', async () => {
-        try {
-            const stats = await DatabaseManager.getPlayerStatistics(socket.id);
-            socket.emit('player_stats', stats);
-        } catch (error) {
-            console.error('Error obteniendo estadísticas:', error);
-            socket.emit('error', { message: 'Error obteniendo estadísticas' });
-        }
-    });
-
-    // Desconexión
     socket.on('disconnect', () => {
         const player = gameState.players.get(socket.id);
         if (player) {
@@ -705,16 +704,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// Funciones de utilidad
-function calculatePlayerNetWorth(player) {
-    let total = player.money;
-    for (let resource in player.inventory) {
-        total += player.inventory[resource] * gameState.market[resource].price;
-    }
-    return total;
-}
-
-// Rutas de la API REST
+// Rutas API
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/index.html'));
 });
@@ -732,82 +722,52 @@ app.get('/api/game-info', (req, res) => {
         analytics: {
             riskLevel: gameState.analytics.riskLevel,
             cartelAlerts: gameState.analytics.cartelAlerts.length,
-            lastAnalysis: gameState.analytics.lastReport ? gameState.analytics.lastReport.timestamp : null
+            lastAnalysis: gameState.analytics.lastReport.timestamp
         }
     });
 });
 
-app.get('/api/market-analytics', async (req, res) => {
-    try {
-        const analytics = await DatabaseManager.getMarketAnalytics(7);
-        res.json({
-            success: true,
-            data: analytics,
-            currentReport: gameState.analytics.lastReport
-        });
-    } catch (error) {
-        console.error('Error en API analytics:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error obteniendo analytics'
-        });
-    }
-});
-
-app.get('/api/player/:id/stats', async (req, res) => {
-    try {
-        const stats = await DatabaseManager.getPlayerStatistics(req.params.id);
-        if (stats) {
-            res.json({ success: true, data: stats });
-        } else {
-            res.status(404).json({ success: false, message: 'Jugador no encontrado' });
-        }
-    } catch (error) {
-        console.error('Error en API stats:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error obteniendo estadísticas'
-        });
-    }
-});
-
-// Inicialización del servidor
-async function startServer() {
-    try {
-        // Inicializar base de datos
-        await DatabaseManager.initialize();
-        
-        // Inicializar bots
-        initializeBots();
-        
-        // Iniciar tick económico
-        setInterval(economicTick, constants.GAME_CONFIG.TICK_INTERVAL);
-        
-        // Iniciar análisis periódico
-        setInterval(runMarketAnalysis, constants.GAME_CONFIG.TICK_INTERVAL * 5);
-        
-        // Iniciar servidor
-        server.listen(PORT, () => {
-            console.log(`🎮 Simulador de Economía ejecutándose en puerto ${PORT}`);
-            console.log(`📊 Mercado inicializado con ${gameState.resources.length} recursos`);
-            console.log(`🤖 ${gameState.bots.size} bots activos`);
-            console.log(`🔄 Tick económico cada ${constants.GAME_CONFIG.TICK_INTERVAL / 1000} segundos`);
-            console.log(`📈 Analytics y detección de carteles habilitados`);
-        });
-        
-    } catch (error) {
-        console.error('❌ Error iniciando servidor:', error);
-        process.exit(1);
-    }
+// Iniciar servidor
+function startServer() {
+    console.log('🚀 Iniciando Simulador de Economía...');
+    
+    // Inicializar bots
+    initializeBots();
+    
+    // Iniciar sistemas
+    setInterval(economicTick, 15000); // Cada 15 segundos
+    setInterval(runBotActions, 8000); // Bots cada 8 segundos
+    setInterval(runMarketAnalysis, 30000); // Analytics cada 30 segundos
+    
+    // Iniciar servidor HTTP
+    server.listen(PORT, () => {
+        console.log('\n🎮 ==========================================');
+        console.log(`🎮 Simulador de Economía ejecutándose en puerto ${PORT}`);
+        console.log(`📊 Mercado inicializado con ${gameState.resources.length} recursos`);
+        console.log(`🤖 ${gameState.bots.size} bots activos`);
+        console.log(`🔄 Tick económico cada 15 segundos`);
+        console.log(`📈 Analytics básicos activados`);
+        console.log(`🌐 URL: http://localhost:${PORT}`);
+        console.log('🎮 ==========================================\n');
+    });
 }
 
-// Manejo de errores globales
+// Manejo de errores
 process.on('uncaughtException', (error) => {
-    console.error('❌ Error no capturado:', error);
+    console.error('❌ Error no capturado:', error.message);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('❌ Promesa rechazada:', reason);
+});
+
+// Manejo de cierre graceful
+process.on('SIGINT', () => {
+    console.log('\n📊 Cerrando servidor...');
+    console.log(`📈 Total de ticks ejecutados: ${gameState.tick}`);
+    console.log(`👥 Jugadores totales: ${gameState.players.size}`);
+    console.log('👋 ¡Hasta luego!');
+    process.exit(0);
 });
 
 // Iniciar servidor
