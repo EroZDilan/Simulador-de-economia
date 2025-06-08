@@ -1,0 +1,721 @@
+{
+  "timestamp": 1749336535999,
+  "tick": 45,
+  "market": {
+    "agua": {
+      "price": 19,
+      "supply": 312,
+      "demand": 1120
+    },
+    "comida": {
+      "price": 17,
+      "supply": 863,
+      "demand": 880
+    },
+    "energia": {
+      "price": 34,
+      "supply": 567,
+      "demand": 703
+    },
+    "materiales": {
+      "price": 39,
+      "supply": 447,
+      "demand": 535
+    }
+  },
+  "economicCycle": "expansion",
+  "cycleCounter": 9,
+  "marketEvents": [
+    {
+      "type": "blackout",
+      "name": "Crisis Energética",
+      "resource": "energia",
+      "effect": {
+        "supply": -0.2,
+        "demand": 0.25,
+        "originalSupply": 462,
+        "originalDemand": 842
+      },
+      "tick": 3,
+      "timestamp": 1749327348062,
+      "severity": 0.45
+    },
+    {
+      "type": "drought",
+      "name": "Sequía Severa",
+      "resource": "agua",
+      "effect": {
+        "supply": -0.25,
+        "demand": 0.2,
+        "originalSupply": 696,
+        "originalDemand": 916
+      },
+      "tick": 4,
+      "timestamp": 1749327366068,
+      "severity": 0.45
+    },
+    {
+      "type": "drought",
+      "name": "Sequía Severa",
+      "resource": "agua",
+      "effect": {
+        "supply": -0.25,
+        "demand": 0.2,
+        "originalSupply": 465,
+        "originalDemand": 1094
+      },
+      "tick": 5,
+      "timestamp": 1749327384069,
+      "severity": 0.45
+    },
+    {
+      "type": "innovation",
+      "name": "Avance Tecnológico",
+      "resource": "energia",
+      "effect": {
+        "supply": 0.2,
+        "demand": -0.15,
+        "originalSupply": 571,
+        "originalDemand": 723
+      },
+      "tick": 6,
+      "timestamp": 1749327402081,
+      "severity": 0.35
+    }
+  ],
+  "analytics": {
+    "lastReport": {
+      "marketTrend": "bullish",
+      "riskLevel": "low",
+      "cartelAlerts": 0,
+      "timestamp": 1749336535994,
+      "volatility": 0.06903873552044885,
+      "avgPriceChange": 0.5733333333333334
+    },
+    "cartelAlerts": []
+  },
+  "participantCounts": {
+    "humans": 0,
+    "standardBots": 5,
+    "qLearningBots": 4
+  },
+  "systemMetrics": {
+    "uptime": 9242209,
+    "totalVolume": 245,
+    "marketVolatility": 0.06903873552044885
+  },
+  "qLearningBotsStats": [
+    {
+      "id": "qbot_41428826-714b-4253-95b3-df5bb4e78b80",
+      "name": "AlphaAI",
+      "strategy": "q_learning_aggressive",
+      "netWorth": 353,
+      "qTableSize": 22,
+      "epsilon": 0.3564436223120835,
+      "statistics": {
+        "totalReward": -23.84835119481402,
+        "learningEpisodes": 22,
+        "explorationActions": 7,
+        "exploitationActions": 16,
+        "avgReward": -1.0840159634006372,
+        "bestReward": -1.0840159634006368,
+        "worstReward": -1.0840159634006368,
+        "recentPerformance": [
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368,
+          -1.0840159634006368
+        ]
+      },
+      "recentTransactions": [
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 11,
+          "timestamp": 1749327402077,
+          "profit": 0,
+          "reward": -1.0840159634006368,
+          "qValue": 0,
+          "isExploration": true
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 12,
+          "timestamp": 1749327402115,
+          "profit": 0,
+          "reward": -1.0840159634006368,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 12,
+          "timestamp": 1749327414120,
+          "profit": 0,
+          "reward": -1.0840159634006368,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "energia",
+          "quantity": 1,
+          "price": 31,
+          "timestamp": 1749327420077,
+          "profit": 0,
+          "reward": -1.0840159634006368,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "sell",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 14,
+          "timestamp": 1749327426122,
+          "profit": 0,
+          "reward": -1.0840159634006368,
+          "qValue": 0,
+          "isExploration": true
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 14,
+          "timestamp": 1749327438091,
+          "profit": 0,
+          "reward": -1.0840159634006368,
+          "qValue": 0,
+          "isExploration": true
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 16,
+          "timestamp": 1749327438134,
+          "profit": 0,
+          "reward": -1.0840159634006368,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 10,
+          "price": 16,
+          "timestamp": 1749327450144,
+          "profit": 0,
+          "reward": -1.0840159634006368,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "comida",
+          "quantity": 5,
+          "price": 17,
+          "timestamp": 1749327456096,
+          "profit": 0,
+          "reward": -1.0840159634006368,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 19,
+          "timestamp": 1749327462157,
+          "profit": 0,
+          "reward": -1.0840159634006368,
+          "qValue": 0,
+          "isExploration": true
+        }
+      ]
+    },
+    {
+      "id": "qbot_3f6de0e0-53d5-4719-ada0-49d8d3c35f05",
+      "name": "BetaAI",
+      "strategy": "q_learning_conservative",
+      "netWorth": 753,
+      "qTableSize": 22,
+      "epsilon": 0.17822181115604174,
+      "statistics": {
+        "totalReward": -23.815155087241763,
+        "learningEpisodes": 22,
+        "explorationActions": 5,
+        "exploitationActions": 18,
+        "avgReward": -1.0825070494200801,
+        "bestReward": -1.0825070494200801,
+        "worstReward": -1.0825070494200801,
+        "recentPerformance": [
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801,
+          -1.0825070494200801
+        ]
+      },
+      "recentTransactions": [
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 11,
+          "timestamp": 1749327402078,
+          "profit": 0,
+          "reward": -1.0825070494200801,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 12,
+          "timestamp": 1749327402116,
+          "profit": 0,
+          "reward": -1.0825070494200801,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "sell",
+          "resource": "agua",
+          "quantity": 20,
+          "price": 12,
+          "timestamp": 1749327414121,
+          "profit": 0,
+          "reward": -1.0825070494200801,
+          "qValue": 0,
+          "isExploration": true
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 12,
+          "timestamp": 1749327420078,
+          "profit": 0,
+          "reward": -1.0825070494200801,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "materiales",
+          "quantity": 1,
+          "price": 38,
+          "timestamp": 1749327426123,
+          "profit": 0,
+          "reward": -1.0825070494200801,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 14,
+          "timestamp": 1749327438093,
+          "profit": 0,
+          "reward": -1.0825070494200801,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 16,
+          "timestamp": 1749327438136,
+          "profit": 0,
+          "reward": -1.0825070494200801,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 10,
+          "price": 16,
+          "timestamp": 1749327450145,
+          "profit": 0,
+          "reward": -1.0825070494200801,
+          "qValue": 0,
+          "isExploration": true
+        },
+        {
+          "type": "sell",
+          "resource": "agua",
+          "quantity": 15,
+          "price": 16,
+          "timestamp": 1749327456098,
+          "profit": 0,
+          "reward": -1.0825070494200801,
+          "qValue": 0,
+          "isExploration": true
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 15,
+          "price": 19,
+          "timestamp": 1749327462158,
+          "profit": 0,
+          "reward": -1.0825070494200801,
+          "qValue": 0,
+          "isExploration": true
+        }
+      ]
+    },
+    {
+      "id": "qbot_b29684d9-9c9f-46b0-8f1c-80cb2b0f1313",
+      "name": "GammaAI",
+      "strategy": "q_learning_adaptive",
+      "netWorth": 182,
+      "qTableSize": 22,
+      "epsilon": 0.26733271673406256,
+      "statistics": {
+        "totalReward": -23.376631612428678,
+        "learningEpisodes": 22,
+        "explorationActions": 7,
+        "exploitationActions": 16,
+        "avgReward": -1.0625741642013036,
+        "bestReward": -1.0625741642013031,
+        "worstReward": -1.0625741642013031,
+        "recentPerformance": [
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031,
+          -1.0625741642013031
+        ]
+      },
+      "recentTransactions": [
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 11,
+          "timestamp": 1749327402079,
+          "profit": 0,
+          "reward": -1.0625741642013031,
+          "qValue": 0,
+          "isExploration": true
+        },
+        {
+          "type": "buy",
+          "resource": "energia",
+          "quantity": 1,
+          "price": 31,
+          "timestamp": 1749327402117,
+          "profit": 0,
+          "reward": -1.0625741642013031,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 12,
+          "timestamp": 1749327414123,
+          "profit": 0,
+          "reward": -1.0625741642013031,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 12,
+          "timestamp": 1749327420079,
+          "profit": 0,
+          "reward": -1.0625741642013031,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 14,
+          "timestamp": 1749327426124,
+          "profit": 0,
+          "reward": -1.0625741642013031,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 20,
+          "price": 14,
+          "timestamp": 1749327438093,
+          "profit": 0,
+          "reward": -1.0625741642013031,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 16,
+          "timestamp": 1749327438137,
+          "profit": 0,
+          "reward": -1.0625741642013031,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 16,
+          "timestamp": 1749327450145,
+          "profit": 0,
+          "reward": -1.0625741642013031,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 10,
+          "price": 16,
+          "timestamp": 1749327456100,
+          "profit": 0,
+          "reward": -1.0625741642013031,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "comida",
+          "quantity": 1,
+          "price": 17,
+          "timestamp": 1749327462159,
+          "profit": 0,
+          "reward": -1.0625741642013031,
+          "qValue": 0,
+          "isExploration": false
+        }
+      ]
+    },
+    {
+      "id": "qbot_744adfe0-02a3-4fed-beff-d0e48da2b641",
+      "name": "DeltaAI",
+      "strategy": "q_learning_contrarian",
+      "netWorth": 221,
+      "qTableSize": 22,
+      "epsilon": 0.2227772639450522,
+      "statistics": {
+        "totalReward": -22.63003106648965,
+        "learningEpisodes": 22,
+        "explorationActions": 6,
+        "exploitationActions": 17,
+        "avgReward": -1.0286377757495295,
+        "bestReward": -0.10725133206867131,
+        "worstReward": -1.072513320686713,
+        "recentPerformance": [
+          -0.10725133206867131,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713,
+          -1.072513320686713
+        ]
+      },
+      "recentTransactions": [
+        {
+          "type": "sell",
+          "resource": "materiales",
+          "quantity": 15,
+          "price": 36,
+          "timestamp": 1749327402081,
+          "profit": 0,
+          "reward": -1.072513320686713,
+          "qValue": 0,
+          "isExploration": true
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 12,
+          "timestamp": 1749327402118,
+          "profit": 0,
+          "reward": -1.072513320686713,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 12,
+          "timestamp": 1749327414123,
+          "profit": 0,
+          "reward": -1.072513320686713,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "comida",
+          "quantity": 5,
+          "price": 17,
+          "timestamp": 1749327420079,
+          "profit": 0,
+          "reward": -1.072513320686713,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 14,
+          "timestamp": 1749327426126,
+          "profit": 0,
+          "reward": -1.072513320686713,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 5,
+          "price": 14,
+          "timestamp": 1749327438094,
+          "profit": 0,
+          "reward": -1.072513320686713,
+          "qValue": 0,
+          "isExploration": true
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 10,
+          "price": 16,
+          "timestamp": 1749327438137,
+          "profit": 0,
+          "reward": -1.072513320686713,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 15,
+          "price": 16,
+          "timestamp": 1749327450146,
+          "profit": 0,
+          "reward": -1.072513320686713,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 20,
+          "price": 16,
+          "timestamp": 1749327456101,
+          "profit": 0,
+          "reward": -1.072513320686713,
+          "qValue": 0,
+          "isExploration": false
+        },
+        {
+          "type": "buy",
+          "resource": "agua",
+          "quantity": 1,
+          "price": 19,
+          "timestamp": 1749327462159,
+          "profit": 0,
+          "reward": -1.072513320686713,
+          "qValue": 0,
+          "isExploration": false
+        }
+      ]
+    }
+  ]
+}

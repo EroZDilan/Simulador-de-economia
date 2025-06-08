@@ -2,11 +2,15 @@
   "name": "simulador-economia-multiplayer",
   "version": "1.0.0",
   "description": "Simulador económico en tiempo real con IA y multiplayer",
-  "main": "server/app.js",
+  "main": "server/app-integrated.js",
   "scripts": {
-    "start": "node server/app.js",
-    "dev": "concurrently \"nodemon server/app.js\" \"npx http-server client -p 3001 -c-1\"",
-    "server": "nodemon server/app.js",
+    "reset-db": "node scripts/reset-database.js",
+    "start": "node server/app-integrated.js",
+    "dev": "concurrently \"nodemon server/app-integrated.js\" \"echo 'Server running on http://localhost:3000'\"",
+    "dev-separate": "concurrently \"nodemon server/app-integrated.js\" \"npx http-server client -p 3001 -c-1\"",
+    "server": "nodemon server/app-integrated.js",
+    "simple": "node server/app-simple.js",
+    "final": "node server/app.js",
     "client": "npx http-server client -p 3001 -c-1",
     "init-db": "node server/init-database.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -24,14 +28,6 @@
   ],
   "author": "Tu Nombre <tu.email@ejemplo.com>",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/tuusuario/simulador-economia.git"
-  },
-  "bugs": {
-    "url": "https://github.com/tuusuario/simulador-economia/issues"
-  },
-  "homepage": "https://github.com/tuusuario/simulador-economia#readme",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",

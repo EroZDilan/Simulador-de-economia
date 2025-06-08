@@ -1,0 +1,171 @@
+{
+  "sessionSummary": {
+    "duration": 247687,
+    "totalTicks": 13,
+    "participantCounts": {
+      "humans": 1,
+      "standardBots": 5,
+      "qLearningBots": 4
+    },
+    "totalVolume": 352,
+    "totalTransactions": 150
+  },
+  "finalPerformances": [
+    {
+      "id": "qbot_1b43e05a-230e-4c0c-a21f-30f9031cc79c",
+      "name": "DeltaAI",
+      "type": "Q-Learning",
+      "netWorth": 2999,
+      "roi": 199.9
+    },
+    {
+      "id": "qbot_48fc4f87-9744-42e8-a982-1cc48b51b53b",
+      "name": "BetaAI",
+      "type": "Q-Learning",
+      "netWorth": 2746,
+      "roi": 174.6
+    },
+    {
+      "id": "qbot_827de30e-b439-47c1-bc19-6c54fb7587e5",
+      "name": "AlphaAI",
+      "type": "Q-Learning",
+      "netWorth": 2733,
+      "roi": 173.3
+    },
+    {
+      "id": "Aoh19g8ha7abTC3aAAAF",
+      "name": "Eros",
+      "type": "Human",
+      "netWorth": 2655,
+      "roi": 165.5
+    },
+    {
+      "id": "bot_3cb419ad-7b6c-4235-9a49-fc5922d97b06",
+      "name": "Warren_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2600,
+      "roi": 160
+    },
+    {
+      "id": "bot_2ea855bd-44ac-4e39-96a8-2911e01d157c",
+      "name": "Wolf_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2600,
+      "roi": 160
+    },
+    {
+      "id": "bot_99681962-471b-4c5b-9847-d7ec28087586",
+      "name": "Zen_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2600,
+      "roi": 160
+    },
+    {
+      "id": "bot_0225bff1-1b7b-4e05-9816-c30ef9ba7c6d",
+      "name": "Adapt_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2600,
+      "roi": 160
+    },
+    {
+      "id": "bot_bf123032-e09f-4c1b-96ef-cfd3bf17afba",
+      "name": "Contra_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2600,
+      "roi": 160
+    },
+    {
+      "id": "qbot_bbb48399-0179-42cc-bd0a-499219ab2dcb",
+      "name": "GammaAI",
+      "type": "Q-Learning",
+      "netWorth": 2540,
+      "roi": 154
+    }
+  ],
+  "marketSummary": {
+    "finalPrices": {
+      "agua": 10,
+      "comida": 7,
+      "energia": 29,
+      "materiales": 31
+    },
+    "finalVolatility": 0.055606133249084415,
+    "finalCycle": "expansion"
+  },
+  "qLearningProgress": [
+    {
+      "name": "AlphaAI",
+      "strategy": "q_learning_aggressive",
+      "qTableSize": 32,
+      "finalEpsilon": 0.33901714012093803,
+      "totalReward": -34.12673966952229,
+      "learningEpisodes": 32
+    },
+    {
+      "name": "BetaAI",
+      "strategy": "q_learning_conservative",
+      "qTableSize": 32,
+      "finalEpsilon": 0.16950857006046902,
+      "totalReward": -34.31216330164638,
+      "learningEpisodes": 32
+    },
+    {
+      "name": "GammaAI",
+      "strategy": "q_learning_adaptive",
+      "qTableSize": 32,
+      "finalEpsilon": 0.2542628550907034,
+      "totalReward": -33.603141250097366,
+      "learningEpisodes": 32
+    },
+    {
+      "name": "DeltaAI",
+      "strategy": "q_learning_contrarian",
+      "qTableSize": 32,
+      "finalEpsilon": 0.21188571257558633,
+      "totalReward": -33.8445069946755,
+      "learningEpisodes": 32
+    }
+  ],
+  "riskAnalysis": {
+    "timestamp": 1749246230888,
+    "totalBots": 9,
+    "riskDistribution": {
+      "low": 0,
+      "moderate": 5,
+      "high": 0,
+      "extreme": 4
+    },
+    "averageRiskScore": 0.6580415045395589,
+    "activeAlerts": 24,
+    "highRiskBots": [
+      {
+        "botId": "qbot_827de30e-b439-47c1-bc19-6c54fb7587e5",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      },
+      {
+        "botId": "qbot_48fc4f87-9744-42e8-a982-1cc48b51b53b",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      },
+      {
+        "botId": "qbot_bbb48399-0179-42cc-bd0a-499219ab2dcb",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      },
+      {
+        "botId": "qbot_1b43e05a-230e-4c0c-a21f-30f9031cc79c",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      }
+    ],
+    "recommendations": [
+      {
+        "type": "system_wide",
+        "message": "Average risk level is high across all bots",
+        "action": "reduce_overall_risk"
+      }
+    ]
+  },
+  "cartelAlerts": []
+}

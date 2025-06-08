@@ -1,0 +1,164 @@
+{
+  "sessionSummary": {
+    "duration": 195988,
+    "totalTicks": 10,
+    "participantCounts": {
+      "humans": 0,
+      "standardBots": 5,
+      "qLearningBots": 4
+    },
+    "totalVolume": 95,
+    "totalTransactions": 102
+  },
+  "finalPerformances": [
+    {
+      "id": "qbot_4434d402-fbb3-4f65-bd62-38b140b84419",
+      "name": "DeltaAI",
+      "type": "Q-Learning",
+      "netWorth": 2897,
+      "roi": 189.7
+    },
+    {
+      "id": "qbot_93a03d6a-6775-47cb-bc00-faa693074702",
+      "name": "BetaAI",
+      "type": "Q-Learning",
+      "netWorth": 2792,
+      "roi": 179.20000000000002
+    },
+    {
+      "id": "bot_1ebec301-5be4-44b0-bb6d-8c0b581baf30",
+      "name": "Warren_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2790,
+      "roi": 179
+    },
+    {
+      "id": "bot_dfebf769-59e7-4f6b-a379-a94596900d9f",
+      "name": "Wolf_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2790,
+      "roi": 179
+    },
+    {
+      "id": "bot_1a1cdbf9-7001-4aea-95ce-1d8dcad85073",
+      "name": "Zen_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2790,
+      "roi": 179
+    },
+    {
+      "id": "bot_cf9f551b-f901-48f7-ab06-5f33f5c2e45c",
+      "name": "Adapt_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2790,
+      "roi": 179
+    },
+    {
+      "id": "bot_aec8a5fc-909d-4914-9579-e16c48e07be1",
+      "name": "Contra_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2790,
+      "roi": 179
+    },
+    {
+      "id": "qbot_650d693a-e16c-4c08-9bed-c2e7418fad4e",
+      "name": "GammaAI",
+      "type": "Q-Learning",
+      "netWorth": 2786,
+      "roi": 178.6
+    },
+    {
+      "id": "qbot_a3a8225f-98de-4560-87a1-7081152f660b",
+      "name": "AlphaAI",
+      "type": "Q-Learning",
+      "netWorth": 2714,
+      "roi": 171.4
+    }
+  ],
+  "marketSummary": {
+    "finalPrices": {
+      "agua": 10,
+      "comida": 19,
+      "energia": 22,
+      "materiales": 28
+    },
+    "finalVolatility": 0.011363636363636364,
+    "finalCycle": "expansion"
+  },
+  "qLearningProgress": [
+    {
+      "name": "AlphaAI",
+      "strategy": "q_learning_aggressive",
+      "qTableSize": 24,
+      "finalEpsilon": 0.35288809717952047,
+      "totalReward": -25.430371201704784,
+      "learningEpisodes": 24
+    },
+    {
+      "name": "BetaAI",
+      "strategy": "q_learning_conservative",
+      "qTableSize": 24,
+      "finalEpsilon": 0.17644404858976023,
+      "totalReward": -26.338904525820627,
+      "learningEpisodes": 24
+    },
+    {
+      "name": "GammaAI",
+      "strategy": "q_learning_adaptive",
+      "qTableSize": 23,
+      "finalEpsilon": 0.2646660728846403,
+      "totalReward": -25.64060979723292,
+      "learningEpisodes": 24
+    },
+    {
+      "name": "DeltaAI",
+      "strategy": "q_learning_contrarian",
+      "qTableSize": 23,
+      "finalEpsilon": 0.22055506073720033,
+      "totalReward": -25.049890055619915,
+      "learningEpisodes": 24
+    }
+  ],
+  "riskAnalysis": {
+    "timestamp": 1749223762421,
+    "totalBots": 9,
+    "riskDistribution": {
+      "low": 0,
+      "moderate": 5,
+      "high": 0,
+      "extreme": 4
+    },
+    "averageRiskScore": 0.6285693688925793,
+    "activeAlerts": 16,
+    "highRiskBots": [
+      {
+        "botId": "qbot_a3a8225f-98de-4560-87a1-7081152f660b",
+        "riskLevel": "extreme",
+        "riskScore": 0.7625591026419093
+      },
+      {
+        "botId": "qbot_93a03d6a-6775-47cb-bc00-faa693074702",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      },
+      {
+        "botId": "qbot_650d693a-e16c-4c08-9bed-c2e7418fad4e",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      },
+      {
+        "botId": "qbot_4434d402-fbb3-4f65-bd62-38b140b84419",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      }
+    ],
+    "recommendations": [
+      {
+        "type": "system_wide",
+        "message": "Average risk level is high across all bots",
+        "action": "reduce_overall_risk"
+      }
+    ]
+  },
+  "cartelAlerts": []
+}

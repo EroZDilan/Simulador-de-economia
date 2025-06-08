@@ -30,6 +30,36 @@
             text-align: center;
             margin-bottom: 30px;
             color: white;
+            position: relative;
+        }
+
+        /* 🔧 NUEVO: Botón de análisis avanzado */
+        .advanced-analysis-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .advanced-analysis-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(45deg, #ee5a24, #ff6b6b);
+        }
+
+        .advanced-analysis-btn::before {
+            content: "🎛️ ";
+            margin-right: 5px;
         }
 
         .game-stats {
@@ -351,6 +381,20 @@
             0%, 50%, 100% { opacity: 1; }
             25%, 75% { opacity: 0.5; }
         }
+
+        /* 🔧 NUEVO: Responsive design para el botón */
+        @media (max-width: 768px) {
+            .advanced-analysis-btn {
+                position: static;
+                margin: 10px auto;
+                display: block;
+                width: fit-content;
+            }
+            
+            .header {
+                padding-bottom: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -362,11 +406,24 @@
         <button onclick="joinGame()" class="btn btn-buy" style="width: 100%; padding: 12px; margin-top: 10px;">
             Entrar al Juego
         </button>
+        
+        <!-- 🔧 NUEVO: Botón para acceso directo al panel de análisis -->
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <p style="margin-bottom: 10px; color: #666;">¿Solo quieres ver el análisis avanzado?</p>
+            <a href="/advanced-control" class="advanced-analysis-btn" style="display: inline-block; text-decoration: none;">
+                Panel de Análisis Avanzado
+            </a>
+        </div>
     </div>
 
     <!-- Área principal del juego -->
     <div id="gameArea" class="container">
         <div class="header">
+            <!-- 🔧 NUEVO: Botón de análisis avanzado en la esquina -->
+            <a href="/advanced-control" class="advanced-analysis-btn" target="_blank">
+                Panel Avanzado
+            </a>
+            
             <h1>🏦 Simulador de Economía Multiplayer</h1>
             <p>Tick: <span id="currentTick">0</span> | Jugadores: <span id="playerCount">0</span> | Bots: <span id="botCount">0</span></p>
             <p>Ciclo Económico: <span id="economicCycle">expansion</span> | Riesgo: <span id="riskLevel">medium</span></p>
@@ -586,8 +643,8 @@
         function updateUI() {
             if (!player) return;
             
-            document.getElementById('playerMoney').textContent = `$${player.money}`;
-            document.getElementById('playerNetWorth').textContent = `$${player.getNetWorth ? player.getNetWorth() : calculateNetWorth()}`;
+            document.getElementById('playerMoney').textContent = `${player.money}`;
+            document.getElementById('playerNetWorth').textContent = `${player.getNetWorth ? player.getNetWorth() : calculateNetWorth()}`;
             document.getElementById('totalTransactions').textContent = player.transactions ? player.transactions.length : 0;
             
             updateMarketDisplay();
@@ -618,7 +675,7 @@
                         <div class="supply-demand">Oferta: ${market.supply} | Demanda: ${market.demand}</div>
                     </div>
                     <div>
-                        <div class="price">$${market.price}</div>
+                        <div class="price">${market.price}</div>
                         <div class="trade-controls">
                             <input type="number" class="quantity-input" id="qty-${resource}" min="1" max="100" value="1">
                             <button class="btn btn-buy" onclick="trade('buy', '${resource}', document.getElementById('qty-${resource}').value)">
@@ -655,7 +712,7 @@
                 item.className = 'inventory-item';
                 item.innerHTML = `
                     <span style="text-transform: capitalize;">${resource}</span>
-                    <span>${quantity} unidades ($${value})</span>
+                    <span>${quantity} unidades (${value})</span>
                 `;
                 inventoryList.appendChild(item);
             }
@@ -822,7 +879,6 @@
             socket.emit('get_market_analytics');
         }
 
-        // Auto-actualizar analytics cada 60 segundos
         // Auto-actualizar analytics cada 60 segundos
         setInterval(() => {
             if (socket && socket.connected) {
