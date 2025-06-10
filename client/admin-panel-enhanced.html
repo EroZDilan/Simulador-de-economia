@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Avanzado de Administrador - Eventos Progresivos</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .admin-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            animation: adminGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes adminGlow {
+            from { box-shadow: 0 0 15px rgba(255, 107, 107, 0.5); }
+            to { box-shadow: 0 0 25px rgba(255, 107, 107, 0.8); }
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .control-panel h2 {
+            margin-bottom: 20px;
+            color: #74b9ff;
+            border-bottom: 2px solid #74b9ff;
+            padding-bottom: 10px;
+        }
+
+        /* Eventos Progresivos */
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .event-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #fdcb6e;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .event-card:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .event-card.legendary {
+            border-left-color: #ff6b6b;
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(238, 90, 36, 0.1));
+        }
+
+        .event-card.epic {
+            border-left-color: #9b59b6;
+            background: linear-gradient(135deg, rgba(155, 89, 182, 0.1), rgba(142, 68, 173, 0.1));
+        }
+
+        .event-card.rare {
+            border-left-color: #3498db;
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.1));
+        }
+
+        .event-name {
+            font-weight: bold;
+            color: #fdcb6e;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+
+        .event-rarity {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .rarity-legendary {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .rarity-epic {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .rarity-rare {
+            background: #3498db;
+            color: white;
+        }
+
+        .event-description {
+            font-size: 0.9em;
+            color: #ddd;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .event-effects {
+            font-size: 0.8em;
+            color: #74b9ff;
+            margin-bottom: 10px;
+        }
+
+        .event-progress {
+            font-size: 0.8em;
+            color: #00b894;
+            font-weight: bold;
+        }
+
+        /* Panel de Observación */
+        .observation-panel {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .bot-observation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .bot-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .bot-card.observed {
+            border-color: #00b894;
+            box-shadow: 0 0 15px rgba(0, 184, 148, 0.3);
+        }
+
+        .bot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .bot-name {
+            font-weight: bold;
+            color: #74b9ff;
+        }
+
+        .bot-strategy {
+            font-size: 0.8em;
+            color: #ddd;
+            background: rgba(116, 185, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 8px;
+        }
+
+        .observation-toggle {
+            background: #74b9ff;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+
+        .observation-toggle:hover {
+            background: #0984e3;
+        }
+
+        .observation-toggle.active {
+            background: #00b894;
+        }
+
+        .thought-stream {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .thought-stream.active {
+            display: block;
+        }
+
+        .thought-entry {
+            font-size: 0.8em;
+            margin-bottom: 8px;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #74b9ff;
+        }
+
+        .thought-timestamp {
+            color: #74b9ff;
+            font-weight: bold;
+        }
+
+        .thought-step {
+            color: #00b894;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.7em;
+        }
+
+        .thought-explanation {
+            color: #ddd;
+            margin-top: 2px;
+        }
+
+        /* Panel de Eventos Activos */
+        .active-events-panel {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .active-event {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #00b894;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00b894, #74b9ff);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        /* Controles */
+        .btn {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #fdcb6e, #e17055);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #00b894, #00a085);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #00b894;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .notification.error {
+            background: #ff6b6b;
+        }
+
+        .notification.warning {
+            background: #fdcb6e;
+            color: #2d3436;
+        }
+
+        .notification.info {
+            background: #74b9ff;
+        }
+
+        .quick-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Métricas de Adaptación */
+        .metrics-panel {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00b894;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .events-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .bot-observation-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="admin-badge">👑 PANEL AVANZADO</div>
+            <h1>🌍 Panel de Eventos Progresivos y Observación de IA</h1>
+            <p>Control total de eventos económicos especiales y observación en tiempo real del pensamiento de bots</p>
+            <div id="connectionStatus">🔴 Desconectado</div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Panel de Eventos Progresivos -->
+            <div class="control-panel">
+                <h2>🌍 Eventos Económicos Progresivos</h2>
+                <p style="margin-bottom: 15px; color: #ddd; font-size: 0.9em;">
+                    Estos eventos se aplican gradualmente al mercado, permitiendo observar la adaptación de los bots en tiempo real
+                </p>
+                
+                <div class="events-grid" id="progressiveEventsGrid">
+                    <!-- Los eventos se cargarán aquí dinámicamente -->
+                </div>
+                
+                <div class="quick-controls">
+                    <button class="btn btn-warning" onclick="stopAllEvents()">⏹️ Detener Todos</button>
+                    <button class="btn btn-primary" onclick="refreshEvents()">🔄 Actualizar</button>
+                </div>
+            </div>
+
+            <!-- Panel de Observación de Bots -->
+            <div class="control-panel">
+                <h2>👁️ Observación de Bots Q-Learning</h2>
+                <p style="margin-bottom: 15px; color: #ddd; font-size: 0.9em;">
+                    Observa el proceso de pensamiento de los bots mientras se adaptan a los eventos
+                </p>
+                
+                <div class="quick-controls">
+                    <button class="btn btn-success" onclick="observeAllBots()">👁️ Observar Todos</button>
+                    <button class="btn btn-warning" onclick="stopAllObservation()">⏹️ Detener Observación</button>
+                    <button class="btn btn-primary" onclick="refreshBots()">🔄 Actualizar Bots</button>
+                </div>
+                
+                <div class="bot-observation-grid" id="botObservationGrid">
+                    <!-- Los bots se cargarán aquí dinámicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Eventos Activos -->
+        <div class="active-events-panel">
+            <h2>⚡ Eventos Progresivos Activos</h2>
+            <div id="activeEventsList">
+                <p style="color: #ddd;">No hay eventos progresivos activos</p>
+            </div>
+        </div>
+
+        <!-- Panel de Métricas de Adaptación -->
+        <div class="metrics-panel">
+            <h2>📊 Métricas de Adaptación en Tiempo Real</h2>
+            <div class="metrics-grid" id="adaptationMetrics">
+                <div class="metric-card">
+                    <div class="metric-value" id="observedBotsCount">0</div>
+                    <div class="metric-label">Bots Observados</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="activeEventsCount">0</div>
+                    <div class="metric-label">Eventos Activos</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="thoughtsRecorded">0</div>
+                    <div class="metric-label">Pensamientos Grabados</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="adaptationScore">0%</div>
+                    <div class="metric-label">Score de Adaptación</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificaciones -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Variables globales
+        let socket;
+        let isConnected = false;
+        let observedBots = new Set();
+        let activeProgressiveEvents = new Map();
+        let thoughtStreams = new Map();
+
+        // Eventos económicos progresivos (definidos localmente para la interfaz)
+        const PROGRESSIVE_EVENTS = {
+            market_crash: {
+                name: 'Crisis Financiera Global',
+                description: 'Colapso repentino del mercado que afecta todos los recursos de manera progresiva',
+                rarity: 'legendary'
+            },
+            tech_revolution: {
+                name: 'Revolución Tecnológica',
+                description: 'Avance tecnológico que transforma gradualmente la eficiencia energética',
+                rarity: 'epic'
+            },
+            climate_disaster: {
+                name: 'Desastre Climático Extremo',
+                description: 'Evento climático que destruye infraestructura crítica de manera gradual',
+                rarity: 'rare'
+            },
+            gold_rush: {
+                name: 'Fiebre de Recursos',
+                description: 'Descubrimiento masivo que inunda progresivamente el mercado',
+                rarity: 'epic'
+            },
+            pandemic_lockdown: {
+                name: 'Confinamiento Global',
+                description: 'Restricciones mundiales que paralizan gradualmente el comercio',
+                rarity: 'legendary'
+            },
+            ai_automation: {
+                name: 'Automatización por IA',
+                description: 'Robots reemplazan trabajadores en sectores clave de manera progresiva',
+                rarity: 'epic'
+            },
+            space_mining: {
+                name: 'Minería Espacial',
+                description: 'Explotación de asteroides que revoluciona gradualmente los materiales',
+                rarity: 'legendary'
+            },
+            fusion_breakthrough: {
+                name: 'Energía de Fusión',
+                description: 'Fusión nuclear comercial que resuelve gradualmente la crisis energética',
+                rarity: 'legendary'
+            },
+            bioengineering_boost: {
+                name: 'Revolución Biotecnológica',
+                description: 'Cultivos modificados que multiplican gradualmente la producción de alimentos',
+                rarity: 'epic'
+            },
+            water_wars: {
+                name: 'Conflictos por Agua',
+                description: 'Disputas geopolíticas por recursos hídricos que escalan gradualmente',
+                rarity: 'rare'
+            }
+        };
+
+        // Inicialización
+        function initSocket() {
+            console.log('🔌 Conectando al servidor como administrador...');
+            
+            socket = io();
+            
+            socket.on('connect', () => {
+                isConnected = true;
+                
+                // Autenticarse como administrador
+                socket.emit('admin_connect', {
+                    username: 'admin',
+                    timestamp: Date.now(),
+                    source: 'progressive_events_panel'
+                });
+                
+                updateConnectionStatus('🟡 Autenticando...', 'warning');
+            });
+
+            socket.on('disconnect', () => {
+                isConnected = false;
+                updateConnectionStatus('🔴 Desconectado', 'error');
+            });
+
+            // Autenticación exitosa
+            socket.on('admin_authenticated', (data) => {
+                updateConnectionStatus('🟢 Conectado como Administrador Avanzado', 'success');
+                showNotification('Panel de eventos progresivos activado', 'success');
+                
+                // Cargar estado inicial
+                loadInitialData();
+            });
+
+            // Eventos progresivos
+            socket.on('admin_progressive_event_started', (data) => {
+                console.log('🌍 Evento progresivo iniciado:', data);
+                activeProgressiveEvents.set(data.eventId, {
+                    ...data,
+                    progress: 0,
+                    currentStep: 0
+                });
+                updateActiveEventsList();
+                showNotification(`Evento progresivo iniciado: ${data.eventName}`, 'info');
+            });
+
+            socket.on('admin_progressive_event_step', (data) => {
+                console.log('📊 Paso de evento progresivo:', data);
+                
+                if (activeProgressiveEvents.has(data.eventId)) {
+                    const event = activeProgressiveEvents.get(data.eventId);
+                    event.progress = data.progressRatio * 100;
+                    event.currentStep = data.currentStep;
+                    event.intensity = data.intensity;
+                    activeProgressiveEvents.set(data.eventId, event);
+                    updateActiveEventsList();
+                }
+            });
+
+            socket.on('admin_progressive_event_completed', (data) => {
+                console.log('✅ Evento progresivo completado:', data);
+                activeProgressiveEvents.delete(data.eventId);
+                updateActiveEventsList();
+                showNotification(`Evento completado: ${data.eventName}`, 'success');
+                
+                // Mostrar reporte final si está disponible
+                if (data.finalReport) {
+                    displayEventReport(data.finalReport);
+                }
+            });
+
+            // Observación de bots
+            socket.on('bot_thinking_process', (data) => {
+                console.log('🧠 Proceso de pensamiento recibido:', data);
+                displayThoughtProcess(data);
+            });
+
+            socket.on('observed_bot_action', (data) => {
+                console.log('🎯 Acción de bot observado:', data);
+                updateBotActionDisplay(data);
+            });
+
+            socket.on('bot_adaptation_snapshot', (data) => {
+                console.log('📸 Snapshot de adaptación:', data);
+                updateAdaptationMetrics(data);
+            });
+
+            // Confirmaciones de observación
+            socket.on('bot_observation_enabled', (data) => {
+                observedBots.add(data.botId);
+                updateBotObservationStatus(data.botId, true);
+                showNotification(`Observación activada: ${data.botName}`, 'success');
+            });
+
+            // Resultados de operaciones
+            socket.on('admin_operation_result', (result) => {
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                } else {
+                    showNotification('Error: ' + result.message, 'error');
+                }
+            });
+
+            // Errores
+            socket.on('error', (error) => {
+                showNotification(`Error: ${error.message}`, 'error');
+            });
+        }
+
+        // Cargar datos iniciales
+        function loadInitialData() {
+            renderProgressiveEvents();
+            loadBotsList();
+            requestObservationStatus();
+            requestAdaptationMetrics();
+            
+            // Auto-actualizar cada 5 segundos
+            setInterval(() => {
+                if (isConnected) {
+                    requestObservationStatus();
+                    requestAdaptationMetrics();
+                }
+            }, 5000);
+        }
+
+        // Renderizar eventos progresivos
+        function renderProgressiveEvents() {
+            const grid = document.getElementById('progressiveEventsGrid');
+            grid.innerHTML = '';
+
+            Object.entries(PROGRESSIVE_EVENTS).forEach(([eventId, event]) => {
+                const card = document.createElement('div');
+                card.className = `event-card ${event.rarity}`;
+                card.onclick = () => triggerProgressiveEvent(eventId);
+
+                card.innerHTML = `
+                    <div class="event-rarity rarity-${event.rarity}">${event.rarity}</div>
+                    <div class="event-name">${event.name}</div>
+                    <div class="event-description">${event.description}</div>
+                    <div class="event-progress">Click para activar evento progresivo</div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        // Activar evento progresivo
+        function triggerProgressiveEvent(eventId) {
+            if (!isConnected) {
+                showNotification('No conectado al servidor', 'error');
+                return;
+            }
+
+            const event = PROGRESSIVE_EVENTS[eventId];
+            if (!event) return;
+
+            if (confirm(`¿Activar evento progresivo "${event.name}"?\n\n${event.description}\n\nEste evento se aplicará gradualmente y activará automáticamente la observación de todos los bots Q-Learning.`)) {
+                console.log('🌍 Activando evento progresivo:', eventId);
+                
+                socket.emit('admin_trigger_progressive_event', { eventId: eventId });
+                showNotification(`Activando evento progresivo: ${event.name}`, 'info');
+            }
+        }
+
+        // Cargar lista de bots
+        function loadBotsList() {
+            fetch('/api/simulation-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.qLearningBots) {
+                        renderBotObservationGrid(data.qLearningBots);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error cargando bots:', error);
+                    showNotification('Error cargando lista de bots', 'error');
+                });
+        }
+
+        // Renderizar grid de observación de bots
+        function renderBotObservationGrid(bots) {
+            const grid = document.getElementById('botObservationGrid');
+            grid.innerHTML = '';
+
+            if (!bots || bots.length === 0) {
+                grid.innerHTML = '<p style="color: #ddd;">No hay bots Q-Learning disponibles</p>';
+                return;
+            }
+
+            bots.forEach(bot => {
+                const card = document.createElement('div');
+                card.className = 'bot-card';
+                card.id = `bot-card-${bot.id}`;
+
+                card.innerHTML = `
+                    <div class="bot-header">
+                        <div>
+                            <div class="bot-name">${bot.name}</div>
+                            <div class="bot-strategy">${bot.strategy}</div>
+                        </div>
+                        <button class="observation-toggle" onclick="toggleBotObservation('${bot.id}', '${bot.name}')" id="toggle-${bot.id}">
+                            Observar
+                        </button>
+                    </div>
+                    <div class="thought-stream" id="thoughts-${bot.id}">
+                        <div style="color: #ddd; font-size: 0.8em;">Esperando pensamientos...</div>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        // Toggle observación de bot individual
+        function toggleBotObservation(botId, botName) {
+            if (!isConnected) {
+                showNotification('No conectado al servidor', 'error');
+                return;
+            }
+
+            const isObserved = observedBots.has(botId);
+            
+            if (isObserved) {
+                socket.emit('admin_stop_bot_observation', { botId: botId });
+                observedBots.delete(botId);
+                updateBotObservationStatus(botId, false);
+            } else {
+                socket.emit('admin_start_bot_observation', { botId: botId });
+            }
+        }
+
+        // Actualizar estado de observación del bot
+        function updateBotObservationStatus(botId, isObserved) {
+            const card = document.getElementById(`bot-card-${botId}`);
+            const toggle = document.getElementById(`toggle-${botId}`);
+            const thoughtStream = document.getElementById(`thoughts-${botId}`);
+            
+            if (card && toggle && thoughtStream) {
+                if (isObserved) {
+                    card.classList.add('observed');
+                    toggle.textContent = 'Detener';
+                    toggle.classList.add('active');
+                    thoughtStream.classList.add('active');
+                } else {
+                    card.classList.remove('observed');
+                    toggle.textContent = 'Observar';
+                    toggle.classList.remove('active');
+                    thoughtStream.classList.remove('active');
+                }
+            }
+        }
+
+        // Mostrar proceso de pensamiento
+        function displayThoughtProcess(data) {
+            const thoughtStream = document.getElementById(`thoughts-${data.botId}`);
+            if (!thoughtStream) return;
+
+            // Limpiar pensamientos anteriores si hay demasiados
+            while (thoughtStream.children.length > 10) {
+                thoughtStream.removeChild(thoughtStream.firstChild);
+            }
+
+            if (data.decisionProcess && data.decisionProcess.length > 0) {
+                data.decisionProcess.forEach(step => {
+                    const entry = document.createElement('div');
+                    entry.className = 'thought-entry';
+                    
+                    const timestamp = new Date(data.timestamp).toLocaleTimeString();
+                    
+                    entry.innerHTML = `
+                        <div class="thought-timestamp">[${timestamp}]</div>
+                        <div class="thought-step">${step.step.replace(/_/g, ' ')}</div>
+                        <div class="thought-explanation">${step.explanation}</div>
+                        ${step.result ? `<div style="font-size: 0.7em; color: #74b9ff; margin-top: 2px;">${JSON.stringify(step.result).substring(0, 100)}...</div>` : ''}
+                    `;
+                    
+                    thoughtStream.appendChild(entry);
+                });
+                
+                // Scroll al final
+                thoughtStream.scrollTop = thoughtStream.scrollHeight;
+            }
+        }
+
+        // Actualizar acción de bot observado
+        function updateBotActionDisplay(data) {
+            const thoughtStream = document.getElementById(`thoughts-${data.botId}`);
+            if (!thoughtStream) return;
+
+            const entry = document.createElement('div');
+            entry.className = 'thought-entry';
+            entry.style.borderLeft = '3px solid #00b894';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const actionColor = data.action === 'buy' ? '#00b894' : data.action === 'sell' ? '#ff6b6b' : '#fdcb6e';
+            
+            entry.innerHTML = `
+                <div class="thought-timestamp">[${timestamp}]</div>
+                <div style="color: ${actionColor}; font-weight: bold;">ACCIÓN: ${data.action.toUpperCase()}</div>
+                <div class="thought-explanation">
+                    ${data.quantity} ${data.resource} a ${data.price} 
+                    (Confianza: ${(data.confidence * 100).toFixed(1)}%)
+                </div>
+                <div style="font-size: 0.7em; color: #ddd; margin-top: 2px;">
+                    ${data.reasoning}
+                </div>
+            `;
+            
+            thoughtStream.appendChild(entry);
+            thoughtStream.scrollTop = thoughtStream.scrollHeight;
+            
+            // Mantener solo las últimas 15 entradas
+            while (thoughtStream.children.length > 15) {
+                thoughtStream.removeChild(thoughtStream.firstChild);
+            }
+        }
+
+        // Actualizar lista de eventos activos
+        function updateActiveEventsList() {
+            const container = document.getElementById('activeEventsList');
+            
+            if (activeProgressiveEvents.size === 0) {
+                container.innerHTML = '<p style="color: #ddd;">No hay eventos progresivos activos</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            activeProgressiveEvents.forEach((event, eventId) => {
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'active-event';
+                
+                const progress = event.progress || 0;
+                const currentStep = event.currentStep || 0;
+                const totalSteps = event.totalSteps || 100;
+                const intensity = event.intensity || 0;
+                
+                eventDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div>
+                            <div style="font-weight: bold; color: #fdcb6e;">${event.eventName}</div>
+                            <div style="font-size: 0.9em; color: #ddd;">${event.description}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: bold; color: #00b894;">${progress.toFixed(1)}%</div>
+                            <div style="font-size: 0.8em; color: #ddd;">Paso ${currentStep}/${totalSteps}</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progress}%;"></div>
+                    </div>
+                    <div style="font-size: 0.8em; color: #74b9ff; margin-top: 5px;">
+                        Intensidad: ${(intensity * 100).toFixed(1)}% | 
+                        Duración estimada: ${Math.round(event.estimatedDuration / 1000)}s
+                    </div>
+                `;
+                
+                container.appendChild(eventDiv);
+            });
+        }
+
+        // Controles globales
+        function observeAllBots() {
+            if (!isConnected) {
+                showNotification('No conectado al servidor', 'error');
+                return;
+            }
+            
+            socket.emit('admin_start_bot_observation', {});
+            showNotification('Iniciando observación de todos los bots...', 'info');
+        }
+
+        function stopAllObservation() {
+            if (!isConnected) {
+                showNotification('No conectado al servidor', 'error');
+                return;
+            }
+            
+            socket.emit('admin_stop_bot_observation', {});
+            observedBots.clear();
+            
+            // Actualizar UI
+            document.querySelectorAll('.bot-card').forEach(card => {
+                card.classList.remove('observed');
+            });
+            
+            document.querySelectorAll('.observation-toggle').forEach(toggle => {
+                toggle.textContent = 'Observar';
+                toggle.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.thought-stream').forEach(stream => {
+                stream.classList.remove('active');
+            });
+            
+            showNotification('Observación detenida para todos los bots', 'warning');
+        }
+
+        function stopAllEvents() {
+            if (activeProgressiveEvents.size === 0) {
+                showNotification('No hay eventos activos para detener', 'warning');
+                return;
+            }
+            
+            if (confirm('¿Detener todos los eventos progresivos activos? Esta acción no se puede deshacer.')) {
+                // Aquí se enviaría un comando para detener eventos si estuviera implementado
+                showNotification('Funcionalidad de detener eventos en desarrollo', 'warning');
+            }
+        }
+
+        function refreshEvents() {
+            renderProgressiveEvents();
+            showNotification('Lista de eventos actualizada', 'info');
+        }
+
+        function refreshBots() {
+            loadBotsList();
+            showNotification('Lista de bots actualizada', 'info');
+        }
+
+        // Solicitar estado de observación
+        function requestObservationStatus() {
+            if (socket && isConnected) {
+                socket.emit('admin_get_observation_status');
+            }
+        }
+
+        // Solicitar métricas de adaptación
+        function requestAdaptationMetrics() {
+            if (socket && isConnected) {
+                socket.emit('admin_get_adaptation_metrics');
+            }
+        }
+
+        // Actualizar métricas de adaptación
+        function updateAdaptationMetrics(data) {
+            if (data.snapshot) {
+                const snapshot = data.snapshot;
+                
+                // Actualizar contadores
+                const botCount = Object.keys(snapshot.botStates || {}).length;
+                document.getElementById('observedBotsCount').textContent = botCount;
+                
+                // Calcular score de adaptación promedio
+                let totalAdaptation = 0;
+                let adaptationCount = 0;
+                
+                Object.values(snapshot.botStates || {}).forEach(bot => {
+                    if (bot.adaptationScore !== undefined) {
+                        totalAdaptation += bot.adaptationScore;
+                        adaptationCount++;
+                    }
+                });
+                
+                const avgAdaptation = adaptationCount > 0 ? (totalAdaptation / adaptationCount * 100) : 0;
+                document.getElementById('adaptationScore').textContent = avgAdaptation.toFixed(1) + '%';
+            }
+        }
+
+        // Mostrar reporte de evento
+        function displayEventReport(report) {
+            console.log('📊 Reporte final del evento:', report);
+            
+            let reportText = `🎯 REPORTE DE EVENTO COMPLETADO\n\n`;
+            reportText += `📅 Duración: ${Math.round(report.eventSummary.duration / 1000)} segundos\n`;
+            reportText += `📊 Pasos completados: ${report.eventSummary.stepsCompleted}/${report.eventSummary.totalSteps}\n\n`;
+            
+            if (report.botAdaptation) {
+                reportText += `🤖 ADAPTACIÓN DE BOTS:\n`;
+                Object.values(report.botAdaptation).forEach(bot => {
+                    reportText += `• ${bot.name}: Score ${(bot.adaptationScore * 100).toFixed(1)}% (${bot.behaviorPattern.pattern})\n`;
+                });
+                reportText += `\n`;
+            }
+            
+            if (report.insights && report.insights.length > 0) {
+                reportText += `💡 INSIGHTS:\n`;
+                report.insights.forEach(insight => {
+                    reportText += `• ${insight.title}: ${insight.description}\n`;
+                });
+            }
+            
+            alert(reportText);
+        }
+
+        // Funciones de UI
+        function updateConnectionStatus(message, type) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = message;
+            statusEl.style.color = type === 'success' ? '#00b894' : type === 'error' ? '#ff6b6b' : '#fdcb6e';
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 4000);
+        }
+
+        // Manejadores de eventos de socket adicionales
+        socket && socket.on('admin_observation_status', (data) => {
+            if (data.status) {
+                document.getElementById('observedBotsCount').textContent = data.status.observedBots.length;
+                document.getElementById('activeEventsCount').textContent = data.status.activeEvents.length;
+                document.getElementById('thoughtsRecorded').textContent = data.status.totalThoughtsRecorded;
+                
+                // Sincronizar estado de observación
+                data.status.observedBots.forEach(botId => {
+                    observedBots.add(botId);
+                    updateBotObservationStatus(botId, true);
+                });
+            }
+        });
+
+        socket && socket.on('admin_adaptation_metrics', (data) => {
+            if (data.metrics) {
+                const metrics = data.metrics;
+                document.getElementById('activeEventsCount').textContent = metrics.activeEvents;
+                document.getElementById('observedBotsCount').textContent = metrics.observedBots;
+                
+                // Mostrar adaptaciones recientes
+                console.log('📈 Métricas de adaptación:', metrics);
+            }
+        });
+
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Iniciando Panel de Eventos Progresivos...');
+            initSocket();
+        });
+
+        // Manejar errores
+        window.addEventListener('error', function(e) {
+            console.error('❌ Error JS:', e.message);
+            showNotification('Error en la interfaz: ' + e.message, 'error');
+        });
+
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('❌ Promesa rechazada:', e.reason);
+            showNotification('Error de promesa: ' + e.reason, 'error');
+        });
+    </script>
+</body>
+</html>

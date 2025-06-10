@@ -1,0 +1,153 @@
+{
+  "sessionSummary": {
+    "duration": 101682,
+    "totalTicks": 5,
+    "participantCounts": {
+      "humans": 0,
+      "standardBots": 5,
+      "qLearningBots": 4
+    },
+    "totalVolume": 0,
+    "totalTransactions": 52
+  },
+  "finalPerformances": [
+    {
+      "id": "qbot_cad96aa0-b521-4812-a926-e79a40758a22",
+      "name": "DeltaAI",
+      "type": "Q-Learning",
+      "netWorth": 2774,
+      "roi": 177.4
+    },
+    {
+      "id": "qbot_66645a6f-a676-40dc-b894-2461f783c1b5",
+      "name": "GammaAI",
+      "type": "Q-Learning",
+      "netWorth": 2770,
+      "roi": 177
+    },
+    {
+      "id": "bot_12131707-482c-49cd-8248-580eaa1923ce",
+      "name": "Warren_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2720,
+      "roi": 172
+    },
+    {
+      "id": "bot_41d6fcac-1d43-49a1-b548-1ccf866da14f",
+      "name": "Wolf_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2720,
+      "roi": 172
+    },
+    {
+      "id": "bot_5d16cc5e-f922-4218-b83e-3cced2722221",
+      "name": "Zen_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2720,
+      "roi": 172
+    },
+    {
+      "id": "bot_70c3efa4-5c0a-402b-909b-2ce4911449df",
+      "name": "Adapt_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2720,
+      "roi": 172
+    },
+    {
+      "id": "bot_ac16bb36-845b-4e01-b3a9-7785095c2546",
+      "name": "Contra_Bot",
+      "type": "Standard Bot",
+      "netWorth": 2720,
+      "roi": 172
+    },
+    {
+      "id": "qbot_fcf0588e-5ab7-4227-8dd1-06d0e0164be6",
+      "name": "BetaAI",
+      "type": "Q-Learning",
+      "netWorth": 2720,
+      "roi": 172
+    },
+    {
+      "id": "qbot_6f6e137b-59e8-4be2-955c-c2465d04c6dd",
+      "name": "AlphaAI",
+      "type": "Q-Learning",
+      "netWorth": 2719,
+      "roi": 171.9
+    }
+  ],
+  "marketSummary": {
+    "finalPrices": {
+      "agua": 10,
+      "comida": 16,
+      "energia": 23,
+      "materiales": 28
+    },
+    "finalVolatility": 0.029537313392357697,
+    "finalCycle": "expansion"
+  },
+  "qLearningProgress": [
+    {
+      "name": "AlphaAI",
+      "strategy": "q_learning_aggressive",
+      "qTableSize": 12,
+      "finalEpsilon": 0.3747658771519215,
+      "totalReward": -13.10006170190786,
+      "learningEpisodes": 12
+    },
+    {
+      "name": "BetaAI",
+      "strategy": "q_learning_conservative",
+      "qTableSize": 12,
+      "finalEpsilon": 0.18738293857596075,
+      "totalReward": -13.030411822804703,
+      "learningEpisodes": 12
+    },
+    {
+      "name": "GammaAI",
+      "strategy": "q_learning_adaptive",
+      "qTableSize": 12,
+      "finalEpsilon": 0.2810744078639411,
+      "totalReward": -12.722355962039563,
+      "learningEpisodes": 12
+    },
+    {
+      "name": "DeltaAI",
+      "strategy": "q_learning_contrarian",
+      "qTableSize": 12,
+      "finalEpsilon": 0.23422867321995097,
+      "totalReward": -13.074980261927026,
+      "learningEpisodes": 12
+    }
+  ],
+  "riskAnalysis": {
+    "timestamp": 1749510016212,
+    "totalBots": 9,
+    "riskDistribution": {
+      "low": 0,
+      "moderate": 6,
+      "high": 0,
+      "extreme": 3
+    },
+    "averageRiskScore": 0.5469581645461755,
+    "activeAlerts": 3,
+    "highRiskBots": [
+      {
+        "botId": "qbot_fcf0588e-5ab7-4227-8dd1-06d0e0164be6",
+        "riskLevel": "extreme",
+        "riskScore": 0.764598880597015
+      },
+      {
+        "botId": "qbot_66645a6f-a676-40dc-b894-2461f783c1b5",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      },
+      {
+        "botId": "qbot_cad96aa0-b521-4812-a926-e79a40758a22",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      }
+    ],
+    "recommendations": []
+  },
+  "cartelAlerts": []
+}

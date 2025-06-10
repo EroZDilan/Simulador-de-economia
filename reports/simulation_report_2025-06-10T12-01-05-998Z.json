@@ -1,0 +1,62 @@
+{
+  "sessionSummary": {
+    "duration": 135958,
+    "totalTicks": 7,
+    "participantCounts": {
+      "humans": 1,
+      "standardBots": 2,
+      "qLearningBots": 0
+    },
+    "totalVolume": 89,
+    "totalTransactions": 6
+  },
+  "finalPerformances": [
+    {
+      "id": "bot_194a87aa-c71f-48f7-82d5-2da974171f41",
+      "name": "Aggressive_Bot_1",
+      "type": "Standard Bot",
+      "netWorth": 2750,
+      "roi": 175
+    },
+    {
+      "id": "bot_22d34c2a-9f38-4a29-a02a-399646db0cd9",
+      "name": "Aggressive_Bot_2",
+      "type": "Standard Bot",
+      "netWorth": 2750,
+      "roi": 175
+    },
+    {
+      "id": "4abrrxYbuSIvenACAAAB",
+      "name": "Eros",
+      "type": "Human",
+      "netWorth": 2746,
+      "roi": 174.6
+    }
+  ],
+  "marketSummary": {
+    "finalPrices": {
+      "agua": 9,
+      "comida": 16,
+      "energia": 26,
+      "materiales": 30
+    },
+    "finalVolatility": 0.025222566930736153,
+    "finalCycle": "expansion"
+  },
+  "qLearningProgress": [],
+  "riskAnalysis": {
+    "timestamp": 1749556865997,
+    "totalBots": 2,
+    "riskDistribution": {
+      "low": 0,
+      "moderate": 2,
+      "high": 0,
+      "extreme": 0
+    },
+    "averageRiskScore": 0.3772727272727273,
+    "activeAlerts": 0,
+    "highRiskBots": [],
+    "recommendations": []
+  },
+  "cartelAlerts": []
+}

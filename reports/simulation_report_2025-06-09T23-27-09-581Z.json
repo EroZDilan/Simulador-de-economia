@@ -1,0 +1,72 @@
+{
+  "sessionSummary": {
+    "duration": 142501,
+    "totalTicks": 7,
+    "participantCounts": {
+      "humans": 0,
+      "standardBots": 0,
+      "qLearningBots": 2
+    },
+    "totalVolume": 0,
+    "totalTransactions": 25
+  },
+  "finalPerformances": [
+    {
+      "id": "qbot_5eb3e6dc-e567-4d9e-84ff-04f13d739f1f",
+      "name": "AI_Aggressive_1",
+      "type": "Q-Learning",
+      "netWorth": 2600,
+      "roi": 160
+    },
+    {
+      "id": "qbot_46b9e797-6977-40ff-b850-b004fcffef79",
+      "name": "AI_Aggressive_2",
+      "type": "Q-Learning",
+      "netWorth": 2580,
+      "roi": 158
+    }
+  ],
+  "marketSummary": {
+    "finalPrices": {
+      "agua": 10,
+      "comida": 15,
+      "energia": 18,
+      "materiales": 29
+    },
+    "finalVolatility": 0.017197593265780218,
+    "finalCycle": "expansion"
+  },
+  "qLearningProgress": [
+    {
+      "name": "AI_Aggressive_1",
+      "strategy": "q_learning_aggressive",
+      "qTableSize": 0,
+      "finalEpsilon": 0.4,
+      "totalReward": 0,
+      "learningEpisodes": 0
+    },
+    {
+      "name": "AI_Aggressive_2",
+      "strategy": "q_learning_aggressive",
+      "qTableSize": 0,
+      "finalEpsilon": 0.4,
+      "totalReward": 0,
+      "learningEpisodes": 0
+    }
+  ],
+  "riskAnalysis": {
+    "timestamp": 1749511629581,
+    "totalBots": 2,
+    "riskDistribution": {
+      "low": 0,
+      "moderate": 2,
+      "high": 0,
+      "extreme": 0
+    },
+    "averageRiskScore": 0.2682637220943299,
+    "activeAlerts": 0,
+    "highRiskBots": [],
+    "recommendations": []
+  },
+  "cartelAlerts": []
+}

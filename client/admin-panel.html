@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administrador - Simulador Económico</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .admin-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            animation: adminGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes adminGlow {
+            from { box-shadow: 0 0 15px rgba(255, 107, 107, 0.5); }
+            to { box-shadow: 0 0 25px rgba(255, 107, 107, 0.8); }
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .control-panel h2 {
+            margin-bottom: 20px;
+            color: #74b9ff;
+            border-bottom: 2px solid #74b9ff;
+            padding-bottom: 10px;
+        }
+
+        .bot-configuration {
+            margin-bottom: 20px;
+        }
+
+        .bot-type {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #00b894;
+        }
+
+        .bot-type-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .bot-name {
+            font-weight: bold;
+            color: #74b9ff;
+            margin-bottom: 5px;
+        }
+
+        .bot-description {
+            font-size: 0.9em;
+            color: #ddd;
+            margin-bottom: 10px;
+        }
+
+        /* Controles extendidos para bots */
+        .bot-controls-extended {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .quantity-btn {
+            background: #74b9ff;
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .quantity-btn:hover {
+            background: #0984e3;
+            transform: scale(1.1);
+        }
+
+        .quantity-display {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        /* Controles de eliminación específica */
+        .elimination-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            margin-left: 10px;
+            padding-left: 10px;
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-small {
+            padding: 6px 10px;
+            font-size: 12px;
+            min-width: auto;
+        }
+
+        /* Display de bots activos */
+        .active-bots-display {
+            margin-top: 8px;
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            border-left: 3px solid #74b9ff;
+        }
+
+        .active-bots-display small {
+            color: #ddd;
+            font-weight: normal;
+        }
+
+        #qlearning-active-count, #standard-active-count {
+            color: #00b894;
+            font-weight: bold;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #fdcb6e, #e17055);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #00b894, #00a085);
+        }
+
+        .btn-info {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+        }
+
+        .simulation-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .status-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .status-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .status-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00b894;
+            margin-bottom: 5px;
+        }
+
+        .status-label {
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        .events-panel {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .event-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #fdcb6e;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .event-card:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .event-name {
+            font-weight: bold;
+            color: #fdcb6e;
+            margin-bottom: 5px;
+        }
+
+        .event-description {
+            font-size: 0.9em;
+            color: #ddd;
+            margin-bottom: 10px;
+        }
+
+        .event-effects {
+            font-size: 0.8em;
+            color: #74b9ff;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #00b894;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .notification.error {
+            background: #ff6b6b;
+        }
+
+        .notification.warning {
+            background: #fdcb6e;
+            color: #2d3436;
+        }
+
+        .notification.info {
+            background: #74b9ff;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .logs-panel {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 3px 0;
+        }
+
+        .log-timestamp {
+            color: #74b9ff;
+            margin-right: 10px;
+        }
+
+        .log-info { color: #00b894; }
+        .log-warning { color: #fdcb6e; }
+        .log-error { color: #ff6b6b; }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+
+            .bot-controls-extended {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .elimination-controls {
+                margin-left: 0;
+                padding-left: 0;
+                border-left: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.3);
+                padding-top: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="admin-badge">👑 ADMINISTRADOR</div>
+            <h1>🎛️ Panel de Control - Simulador Económico</h1>
+            <p>Control total del mercado y agentes inteligentes</p>
+            <div id="connectionStatus">🔴 Desconectado</div>
+        </div>
+
+        <div class="control-grid">
+            <!-- Panel de Configuración de Bots -->
+            <div class="control-panel">
+                <h2>🤖 Configuración de Bots</h2>
+                
+                <div class="bot-configuration">
+                    <!-- Bots Q-Learning -->
+                    <div class="bot-type">
+                        <div class="bot-type-header">
+                            <div class="bot-name">🧠 Q-Learning Bots</div>
+                            <div class="bot-controls-extended">
+                                <!-- Contador y controles existentes -->
+                                <div class="quantity-control">
+                                    <button class="quantity-btn" onclick="changeBotQuantity('qlearning', -1)">−</button>
+                                    <div class="quantity-display" id="qlearning-count">0</div>
+                                    <button class="quantity-btn" onclick="changeBotQuantity('qlearning', 1)">+</button>
+                                </div>
+                                <select id="qlearning-strategy">
+                                    <option value="q_learning_aggressive">Agresivo</option>
+                                    <option value="q_learning_conservative">Conservador</option>
+                                    <option value="q_learning_adaptive">Adaptativo</option>
+                                    <option value="q_learning_contrarian">Contrario</option>
+                                </select>
+                                <!-- Botones de eliminación específica -->
+                                <div class="elimination-controls">
+                                    <button class="btn btn-warning btn-small" onclick="removeSpecificBots('qlearning', 1)" title="Eliminar 1 Q-Learning bot">
+                                        🗑️ -1
+                                    </button>
+                                    <button class="btn btn-danger btn-small" onclick="removeSpecificBots('qlearning', 'all')" title="Eliminar todos los Q-Learning bots">
+                                        🗑️ Todos
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bot-description">
+                            Agentes con aprendizaje por refuerzo que mejoran con la experiencia
+                        </div>
+                        <!-- Mostrar bots activos -->
+                        <div class="active-bots-display" id="qlearning-active-bots">
+                            <small>Bots activos: <span id="qlearning-active-count">0</span></small>
+                        </div>
+                    </div>
+
+                    <!-- Bots Estándar -->
+                    <div class="bot-type">
+                        <div class="bot-type-header">
+                            <div class="bot-name">🎯 Bots Estándar</div>
+                            <div class="bot-controls-extended">
+                                <!-- Contador y controles existentes -->
+                                <div class="quantity-control">
+                                    <button class="quantity-btn" onclick="changeBotQuantity('standard', -1)">−</button>
+                                    <div class="quantity-display" id="standard-count">0</div>
+                                    <button class="quantity-btn" onclick="changeBotQuantity('standard', 1)">+</button>
+                                </div>
+                                <select id="standard-strategy">
+                                    <option value="conservative">Conservador</option>
+                                    <option value="aggressive">Agresivo</option>
+                                    <option value="balanced">Equilibrado</option>
+                                    <option value="contrarian">Contrario</option>
+                                    <option value="arbitrageur">Arbitrajista</option>
+                                </select>
+                                <!-- Botones de eliminación específica -->
+                                <div class="elimination-controls">
+                                    <button class="btn btn-warning btn-small" onclick="removeSpecificBots('standard', 1)" title="Eliminar 1 bot estándar">
+                                        🗑️ -1
+                                    </button>
+                                    <button class="btn btn-danger btn-small" onclick="removeSpecificBots('standard', 'all')" title="Eliminar todos los bots estándar">
+                                        🗑️ Todos
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bot-description">
+                            Bots con estrategias predefinidas y comportamiento determinístico
+                        </div>
+                        <!-- Mostrar bots activos -->
+                        <div class="active-bots-display" id="standard-active-bots">
+                            <small>Bots activos: <span id="standard-active-count">0</span></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="btn btn-success" onclick="applyBotConfiguration()">
+                        ✅ Aplicar Configuración
+                    </button>
+                    <button class="btn btn-warning" onclick="removeAllBots()">
+                        🗑️ Eliminar Todos
+                    </button>
+                    <button class="btn btn-primary" onclick="randomConfiguration()">
+                        🎲 Configuración Aleatoria
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel de Control de Simulación -->
+            <div class="control-panel">
+                <h2>⚙️ Control de Simulación</h2>
+                
+                <div class="simulation-controls">
+                    <button class="btn btn-primary" onclick="startSimulation()">
+                        ▶️ Iniciar
+                    </button>
+                    <button class="btn btn-warning" onclick="pauseSimulation()">
+                        ⏸️ Pausar
+                    </button>
+                    <button class="btn btn-danger" onclick="stopSimulation()">
+                        ⏹️ Detener
+                    </button>
+                    <button class="btn btn-success" onclick="resetSimulation()">
+                        🔄 Reiniciar
+                    </button>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="btn btn-primary" onclick="openAdvancedPanel()">
+                        🎛️ Panel Avanzado
+                    </button>
+                    <button class="btn btn-info" onclick="openGameView()">
+                        🎮 Vista de Juego
+                    </button>
+                    <button class="btn btn-warning" onclick="exportConfiguration()">
+                        📤 Exportar Config
+                    </button>
+                </div>
+
+                <!-- Configuración de Velocidad -->
+                <div style="margin-top: 20px;">
+                    <h3>⏱️ Velocidad de Simulación</h3>
+                    <div style="margin: 10px 0;">
+                        <input type="range" id="speedSlider" min="0.5" max="3" step="0.1" value="1" 
+                               onchange="updateSimulationSpeed(this.value)" style="width: 100%;">
+                        <div style="text-align: center; margin-top: 5px;">
+                            <span id="speedDisplay">1.0x</span> velocidad normal
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Estado -->
+        <div class="status-panel">
+            <h2>📊 Estado de la Simulación</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-value" id="totalBots">0</div>
+                    <div class="status-label">Bots Totales</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="activePlayers">0</div>
+                    <div class="status-label">Jugadores Activos</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="currentTick">0</div>
+                    <div class="status-label">Tick Actual</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="marketVolatility">0%</div>
+                    <div class="status-label">Volatilidad</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="totalTransactions">0</div>
+                    <div class="status-label">Transacciones</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-value" id="economicCycle">-</div>
+                    <div class="status-label">Ciclo Económico</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Eventos Económicos -->
+        <div class="events-panel">
+            <h2>🌍 Eventos Económicos Especiales</h2>
+            <p style="margin-bottom: 15px; color: #ddd;">
+                Como administrador, puedes activar eventos económicos únicos para probar la adaptabilidad de los agentes
+            </p>
+            
+            <div class="events-grid">
+                <!-- Los eventos se llenarán dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Panel de Logs -->
+        <div class="status-panel">
+            <h2>📝 Registro de Actividad</h2>
+            <div class="logs-panel" id="logsPanel">
+                <div class="log-entry">
+                    <span class="log-timestamp">[00:00:00]</span>
+                    <span class="log-info">Sistema iniciado</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificaciones -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Variables globales
+        let socket;
+        let botConfiguration = {
+            qlearning: 0,
+            standard: 0
+        };
+        let simulationSpeed = 1.0;
+        let isConnected = false;
+
+        // Eventos económicos especiales para admin
+        const ADMIN_EVENTS = [
+            {
+                id: 'market_crash',
+                name: 'Crisis Financiera Global',
+                description: 'Colapso repentino del mercado que afecta todos los recursos',
+                effects: { supply: -0.4, demand: -0.3, volatility: 2.0 },
+                resources: ['agua', 'comida', 'energia', 'materiales'],
+                rarity: 'legendary'
+            },
+            {
+                id: 'tech_revolution',
+                name: 'Revolución Tecnológica',
+                description: 'Avance tecnológico que transforma la eficiencia energética',
+                effects: { supply: 0.6, demand: -0.2, volatility: 1.5 },
+                resources: ['energia'],
+                rarity: 'epic'
+            },
+            {
+                id: 'climate_disaster',
+                name: 'Desastre Climático Extremo',
+                description: 'Evento climático que destruye infraestructura crítica',
+                effects: { supply: -0.5, demand: 0.4, volatility: 1.8 },
+                resources: ['agua', 'comida'],
+                rarity: 'rare'
+            },
+            {
+                id: 'gold_rush',
+                name: 'Fiebre de Recursos',
+                description: 'Descubrimiento masivo que inunda el mercado',
+                effects: { supply: 0.8, demand: 0.2, volatility: 1.3 },
+                resources: ['materiales'],
+                rarity: 'epic'
+            },
+            {
+                id: 'pandemic_lockdown',
+                name: 'Confinamiento Global',
+                description: 'Restricciones mundiales que paralizan el comercio',
+                effects: { supply: -0.3, demand: -0.4, volatility: 1.6 },
+                resources: ['agua', 'comida', 'energia', 'materiales'],
+                rarity: 'legendary'
+            },
+            {
+                id: 'ai_automation',
+                name: 'Automatización por IA',
+                description: 'Robots reemplazan trabajadores en sectores clave',
+                effects: { supply: 0.4, demand: -0.3, volatility: 1.2 },
+                resources: ['materiales', 'energia'],
+                rarity: 'epic'
+            },
+            {
+                id: 'space_mining',
+                name: 'Minería Espacial',
+                description: 'Explotación de asteroides revoluciona los materiales',
+                effects: { supply: 1.2, demand: 0.1, volatility: 2.2 },
+                resources: ['materiales'],
+                rarity: 'legendary'
+            },
+            {
+                id: 'fusion_breakthrough',
+                name: 'Energía de Fusión',
+                description: 'Fusión nuclear comercial resuelve la crisis energética',
+                effects: { supply: 0.9, demand: -0.5, volatility: 1.7 },
+                resources: ['energia'],
+                rarity: 'legendary'
+            },
+            {
+                id: 'bioengineering_boost',
+                name: 'Revolución Biotecnológica',
+                description: 'Cultivos modificados multiplican la producción de alimentos',
+                effects: { supply: 0.7, demand: -0.1, volatility: 1.1 },
+                resources: ['comida'],
+                rarity: 'epic'
+            },
+            {
+                id: 'water_wars',
+                name: 'Conflictos por Agua',
+                description: 'Disputas geopolíticas por recursos hídricos escasos',
+                effects: { supply: -0.6, demand: 0.8, volatility: 2.5 },
+                resources: ['agua'],
+                rarity: 'rare'
+            }
+        ];
+
+        // Función para inicializar conexión con autenticación mejorada
+        function initSocket() {
+            console.log('🔌 Conectando como administrador...');
+            
+            socket = io();
+            
+            socket.on('connect', () => {
+                isConnected = true;
+                
+                // Emitir evento de autenticación admin
+                socket.emit('admin_connect', {
+                    username: 'admin',
+                    timestamp: Date.now(),
+                    source: 'admin_panel'
+                });
+                
+                updateConnectionStatus('🟡 Autenticando...', 'warning');
+                logActivity('Conectado, autenticando como administrador', 'info');
+            });
+
+            socket.on('disconnect', () => {
+                isConnected = false;
+                updateConnectionStatus('🔴 Desconectado', 'error');
+                logActivity('Conexión perdida', 'error');
+            });
+
+            // Manejar confirmación de autenticación
+            socket.on('admin_authenticated', (data) => {
+                updateConnectionStatus('🟢 Conectado como Administrador', 'success');
+                logActivity('Autenticación de administrador exitosa', 'info');
+                requestSimulationStatus();
+                showNotification('Autenticación de administrador exitosa', 'success');
+            });
+
+            // Manejar fallo de autenticación
+            socket.on('admin_authentication_failed', (data) => {
+                updateConnectionStatus('🔴 Error de Autenticación', 'error');
+                logActivity('Error de autenticación: ' + data.message, 'error');
+                showNotification('Error de autenticación. Recargando página...', 'error');
+                setTimeout(() => window.location.reload(), 3000);
+            });
+
+            socket.on('admin_simulation_status', (data) => {
+                updateSimulationStatus(data);
+            });
+
+            socket.on('simulation_paused', (data) => {
+                logActivity('Simulación pausada', 'warning');
+                showNotification('Simulación pausada', 'warning');
+            });
+
+            socket.on('simulation_resumed', (data) => {
+                logActivity('Simulación reanudada', 'info');
+                showNotification('Simulación reanudada', 'info');
+            });
+
+            socket.on('bots_updated', (data) => {
+                logActivity(`Bots actualizados: ${data.qlearning} Q-Learning, ${data.standard} estándar`, 'info');
+                updateActiveBotCounts(data);
+                showNotification(`Bots actualizados: ${data.total} total activos`, 'info');
+            });
+
+            socket.on('economic_tick', (data) => {
+                updateTickDisplay(data);
+            });
+
+            // Event listener para respuestas de operaciones administrativas
+            socket.on('admin_operation_result', (result) => {
+                if (result.success) {
+                    logActivity(result.message, 'info');
+                    showNotification(result.message, 'success');
+                    
+                    // Si fue una configuración de bots, actualizar contadores
+                    if (result.statistics && result.statistics.currentTotals) {
+                        updateActiveBotCounts(result.statistics.currentTotals);
+                    }
+                } else {
+                    logActivity('Error: ' + result.message, 'error');
+                    showNotification('Error: ' + result.message, 'error');
+                }
+            });
+
+            socket.on('error', (error) => {
+                logActivity(`Error: ${error.message}`, 'error');
+                showNotification(error.message, 'error');
+            });
+        }
+
+        // Funciones de control de bots
+        function changeBotQuantity(type, delta) {
+            botConfiguration[type] = Math.max(0, Math.min(10, botConfiguration[type] + delta));
+            document.getElementById(`${type}-count`).textContent = botConfiguration[type];
+            logActivity(`${type} bots configurados: ${botConfiguration[type]}`, 'info');
+        }
+
+        function applyBotConfiguration() {
+            if (!isConnected) {
+                showNotification('No conectado al servidor', 'error');
+                return;
+            }
+
+            const qlearningStrategy = document.getElementById('qlearning-strategy').value;
+            const standardStrategy = document.getElementById('standard-strategy').value;
+
+            const config = {
+                qlearning: {
+                    count: botConfiguration.qlearning,
+                    strategy: qlearningStrategy
+                },
+                standard: {
+                    count: botConfiguration.standard,
+                    strategy: standardStrategy
+                }
+            };
+
+            socket.emit('admin_configure_bots', config);
+            logActivity('Aplicando configuración de bots...', 'info');
+            showNotification('Configuración enviada', 'info');
+        }
+
+        // Función para eliminar bots específicos
+        function removeSpecificBots(type, count) {
+            if (!isConnected) {
+                showNotification('No conectado al servidor', 'error');
+                return;
+            }
+            
+            // Determinar el mensaje de confirmación basado en el tipo y cantidad
+            let confirmMessage;
+            if (count === 'all') {
+                const botType = type === 'qlearning' ? 'Q-Learning' : 'estándar';
+                confirmMessage = `¿Eliminar TODOS los bots ${botType}? Esta acción no se puede deshacer.`;
+            } else {
+                const botType = type === 'qlearning' ? 'Q-Learning' : 'estándar';
+                confirmMessage = `¿Eliminar ${count} bot(s) ${botType}?`;
+            }
+            
+            if (confirm(confirmMessage)) {
+                // Mostrar estado de carga
+                showNotification('Eliminando bots...', 'warning');
+                
+                // Emitir evento al servidor
+                socket.emit('admin_remove_specific_bots', {
+                    type: type,
+                    count: count
+                });
+                
+                logActivity(`Solicitando eliminación: ${count} bots ${type}`, 'warning');
+            }
+        }
+
+        function removeAllBots() {
+            if (confirm('¿Eliminar todos los bots de la simulación?')) {
+                socket.emit('admin_remove_all_bots');
+                botConfiguration.qlearning = 0;
+                botConfiguration.standard = 0;
+                updateBotDisplays();
+                logActivity('Eliminando todos los bots', 'warning');
+            }
+        }
+
+        function randomConfiguration() {
+            botConfiguration.qlearning = Math.floor(Math.random() * 6) + 1;
+            botConfiguration.standard = Math.floor(Math.random() * 5) + 1;
+            updateBotDisplays();
+            logActivity('Configuración aleatoria generada', 'info');
+        }
+
+        function updateBotDisplays() {
+            document.getElementById('qlearning-count').textContent = botConfiguration.qlearning;
+            document.getElementById('standard-count').textContent = botConfiguration.standard;
+        }
+
+        // Función para actualizar contadores de bots activos
+        function updateActiveBotCounts(data) {
+            const qlearningActiveElement = document.getElementById('qlearning-active-count');
+            const standardActiveElement = document.getElementById('standard-active-count');
+            
+            if (qlearningActiveElement) {
+                qlearningActiveElement.textContent = data.qlearning || 0;
+            }
+            
+            if (standardActiveElement) {
+                standardActiveElement.textContent = data.standard || 0;
+            }
+            
+            // También actualizar los contadores principales si existen
+            updateBotCounts(data);
+        }
+
+        function updateBotCounts(data) {
+            botConfiguration.qlearning = data.qlearning || 0;
+            botConfiguration.standard = data.standard || 0;
+            updateBotDisplays();
+            updateActiveBotCounts(data);
+        }
+
+        // Funciones de control de simulación
+        function startSimulation() {
+            socket.emit('admin_start_simulation');
+            logActivity('Iniciando simulación', 'info');
+        }
+
+        function pauseSimulation() {
+            socket.emit('admin_pause_simulation');
+            logActivity('Pausando simulación', 'warning');
+        }
+
+        function stopSimulation() {
+            if (confirm('¿Detener la simulación completamente?')) {
+                socket.emit('admin_stop_simulation');
+                logActivity('Deteniendo simulación', 'error');
+            }
+        }
+
+        function resetSimulation() {
+            if (confirm('¿Reiniciar la simulación? Se perderán todos los datos actuales.')) {
+                socket.emit('admin_reset_simulation');
+                logActivity('Reiniciando simulación', 'warning');
+            }
+        }
+
+        function updateSimulationSpeed(speed) {
+            simulationSpeed = parseFloat(speed);
+            document.getElementById('speedDisplay').textContent = speed + 'x';
+            socket.emit('admin_set_speed', { speed: simulationSpeed });
+            logActivity(`Velocidad cambiada a ${speed}x`, 'info');
+        }
+
+        // Funciones de navegación
+        function openAdvancedPanel() {
+            window.open('/advanced-control', '_blank');
+        }
+
+        function openGameView() {
+            window.open('/', '_blank');
+        }
+
+        function exportConfiguration() {
+            const config = {
+                bots: botConfiguration,
+                speed: simulationSpeed,
+                timestamp: Date.now()
+            };
+            
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `admin_config_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            logActivity('Configuración exportada', 'info');
+        }
+
+        // Funciones de eventos
+        function triggerEvent(eventId) {
+            const event = ADMIN_EVENTS.find(e => e.id === eventId);
+            if (!event) return;
+
+            if (confirm(`¿Activar evento "${event.name}"?\n\n${event.description}`)) {
+                socket.emit('admin_trigger_event', { eventId: eventId });
+                logActivity(`Evento activado: ${event.name}`, 'warning');
+                showNotification(`Evento activado: ${event.name}`, 'warning');
+            }
+        }
+
+        // Funciones de UI
+        function updateConnectionStatus(message, type) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = message;
+            statusEl.style.color = type === 'success' ? '#00b894' : type === 'error' ? '#ff6b6b' : '#fdcb6e';
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        function logActivity(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logsPanel = document.getElementById('logsPanel');
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span>
+                <span class="log-${type}">${message}</span>
+            `;
+            
+            logsPanel.insertBefore(logEntry, logsPanel.firstChild);
+            
+            // Mantener solo los últimos 50 logs
+            while (logsPanel.children.length > 50) {
+                logsPanel.removeChild(logsPanel.lastChild);
+            }
+        }
+
+        function updateSimulationStatus(data) {
+            document.getElementById('totalBots').textContent = data.totalBots || 0;
+            document.getElementById('activePlayers').textContent = data.activePlayers || 0;
+            document.getElementById('currentTick').textContent = data.currentTick || 0;
+            document.getElementById('marketVolatility').textContent = ((data.volatility || 0) * 100).toFixed(1) + '%';
+            document.getElementById('totalTransactions').textContent = data.totalTransactions || 0;
+            document.getElementById('economicCycle').textContent = data.economicCycle || '-';
+        }
+
+        function updateTickDisplay(data) {
+            document.getElementById('currentTick').textContent = data.tick || 0;
+            if (data.volatility !== undefined) {
+                document.getElementById('marketVolatility').textContent = ((data.volatility || 0) * 100).toFixed(1) + '%';
+            }
+        }
+
+        function requestSimulationStatus() {
+            if (socket && isConnected) {
+                socket.emit('admin_get_status');
+            }
+        }
+
+        function renderAdminEvents() {
+            const eventsGrid = document.querySelector('.events-grid');
+            eventsGrid.innerHTML = '';
+
+            ADMIN_EVENTS.forEach(event => {
+                const eventCard = document.createElement('div');
+                eventCard.className = 'event-card';
+                eventCard.onclick = () => triggerEvent(event.id);
+
+                const rarityColors = {
+                    'legendary': '#ff6b6b',
+                    'epic': '#9b59b6',
+                    'rare': '#3498db'
+                };
+
+                eventCard.style.borderLeftColor = rarityColors[event.rarity] || '#fdcb6e';
+
+                eventCard.innerHTML = `
+                    <div class="event-name">${event.name}</div>
+                    <div class="event-description">${event.description}</div>
+                    <div class="event-effects">
+                        Recursos: ${event.resources.join(', ')} | 
+                        Rareza: ${event.rarity}
+                    </div>
+                `;
+
+                eventsGrid.appendChild(eventCard);
+            });
+        }
+
+        // Inicializar todo cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Iniciando Panel de Administrador...');
+            
+            // Renderizar eventos
+            renderAdminEvents();
+            
+            // Conectar al servidor
+            initSocket();
+            
+            // Actualizar estado cada 5 segundos
+            setInterval(() => {
+                if (isConnected) {
+                    requestSimulationStatus();
+                }
+            }, 5000);
+            
+            logActivity('Panel de administrador cargado', 'info');
+        });
+
+        // Manejar errores de JavaScript
+        window.addEventListener('error', function(e) {
+            logActivity(`Error JS: ${e.message}`, 'error');
+        });
+
+        // Manejar promesas rechazadas
+        window.addEventListener('unhandledrejection', function(e) {
+            logActivity(`Promesa rechazada: ${e.reason}`, 'error');
+        });
+    </script>
+</body>
+</html>

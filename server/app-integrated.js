@@ -16,6 +16,24 @@ const {
     MarketPredictor,
     RiskManager 
 } = require('./advanced-agents');
+const { 
+    ADMIN_EVENTS,
+    triggerAdminEvent,
+    processActiveProgressiveEvents,
+    enableBotObservation,
+    disableBotObservation,
+    getObservationStatus,
+    getBotThoughtHistory,
+    getAdaptationMetrics
+} = require('./admin-routes-enhanced');
+
+const { 
+    setupAdminRoutes, 
+    setupAdminSocketHandlers, 
+    processActiveAdminEvents,
+    adminState 
+} = require('./admin-routes');
+
 
 const { MarketAnalytics } = require('./analytics');
 const { DatabaseManager } = require('./models');
@@ -40,6 +58,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../client')));
+
 
 // Estado del juego integrado
 const gameState = {
@@ -82,6 +101,8 @@ const gameState = {
         performanceMetrics: new Map()
     }
 };
+setupAdminRoutes(app, gameState, io);
+
 
 // Sistemas avanzados globales
 let marketAnalytics = null;
@@ -751,13 +772,11 @@ function runQLearningBots() {
                 try {
                     const previousNetWorth = bot.calculateSafeNetWorth(gameState);
                     
-                    // Si está siendo observado, usar el sistema de pensamiento
+                    // Usar el sistema de pensamiento mejorado si el bot está siendo observado
                     let decision;
-                    if (bot.isBeingWatched) {
-                        console.log(`🧠 Bot ${bot.name} está siendo observado, generando decisión con pensamiento`);
+                    if (bot.isBeingWatched && bot.makeDecisionWithThinking) {
                         decision = bot.makeDecisionWithThinking(gameState, io);
                     } else {
-                        // Proceso normal
                         decision = bot.makeDecision(gameState);
                     }
                     
@@ -770,7 +789,7 @@ function runQLearningBots() {
                             
                             // Emitir acción del bot si no es hold
                             if (decision.action.type !== 'hold') {
-                                io.emit('bot_action', {
+                                const actionData = {
                                     botId: bot.id,
                                     botName: bot.name,
                                     action: decision.action.type,
@@ -780,8 +799,29 @@ function runQLearningBots() {
                                     confidence: decision.confidence,
                                     reasoning: decision.reasoning,
                                     market: gameState.market,
-                                    performance: performance
-                                });
+                                    performance: performance,
+                                    isObserved: bot.isBeingWatched || false
+                                };
+                                
+                                io.emit('bot_action', actionData);
+                                
+                                // Si el bot está siendo observado, emitir información adicional
+                                if (bot.isBeingWatched) {
+                                    io.emit('observed_bot_action', {
+                                        ...actionData,
+                                        thoughtProcess: bot.lastThoughtProcess,
+                                        adaptationData: {
+                                            qTableGrowth: bot.qTable ? bot.qTable.size : 0,
+                                            explorationRate: bot.epsilon || 0,
+                                            confidence: decision.confidence,
+                                            marketConditions: {
+                                                cycle: gameState.economicCycle,
+                                                volatility: gameState.marketVolatility,
+                                                tick: gameState.tick
+                                            }
+                                        }
+                                    });
+                                }
                             }
                         }
                     }
@@ -1372,27 +1412,36 @@ async function economicTick() {
         
         let event = null;
         if (!gameState.isPaused) {
-            // 1. Ejecutar bots estándar
+            // 1. Procesar eventos progresivos activos PRIMERO
+            const activeProgressiveEvents = processActiveProgressiveEvents(gameState, io);
+            
+            if (activeProgressiveEvents > 0) {
+                console.log(`🌍 Procesando ${activeProgressiveEvents} eventos progresivos activos`);
+            }
+            
+            // 2. Ejecutar bots estándar
             runStandardBots();
             
-            // 2. Ejecutar bots Q-Learning
+            // 3. Ejecutar bots Q-Learning (con observación mejorada)
             runQLearningBots();
             
-            // 3. Generar eventos
-            const event = generateMarketEvent();
+            // 4. Generar eventos normales (solo si no hay eventos progresivos activos)
+            if (activeProgressiveEvents === 0) {
+                event = generateMarketEvent();
+            }
             
-            // 4. Actualizar mercado
+            // 5. Actualizar mercado
             updateMarketPrices();
             
-            // 5. Simular ciclos
+            // 6. Simular ciclos
             simulateEconomicCycle();
             
-            // 6. Ejecutar analytics cada 3 ticks
+            // 7. Ejecutar analytics cada 3 ticks
             if (gameState.tick % 3 === 0) {
                 await runAdvancedAnalytics();
             }
             
-            // 7. Guardar historial de precios en BD
+            // 8. Guardar historial de precios en BD
             if (DatabaseManager && gameState.tick % 5 === 0) {
                 try {
                     DatabaseManager.savePriceHistory(gameState.market, gameState.tick, gameState.economicCycle);
@@ -1402,7 +1451,9 @@ async function economicTick() {
             }
         }
         
-        // 8. Enviar actualizaciones a clientes
+        // 9. Enviar actualizaciones a clientes con información de eventos progresivos
+        const observationStatus = getObservationStatus();
+        
         const tickData = {
             tick: gameState.tick,
             market: gameState.market,
@@ -1421,20 +1472,34 @@ async function economicTick() {
                 standard: gameState.bots.size,
                 qLearning: gameState.qLearningBots.size,
                 total: gameState.bots.size + gameState.qLearningBots.size
+            },
+            // Información de eventos progresivos y observación
+            progressiveEvents: {
+                active: observationStatus.activeEvents.length,
+                observedBots: observationStatus.observedBots.length,
+                observationEnabled: observationStatus.observationEnabled
             }
         };
         
         io.emit('economic_tick', tickData);
         
-        // Log del estado
+        // Log del estado con información de eventos progresivos
         const prices = gameState.resources.map(r => `${r}:${gameState.market[r].price}`).join(', ');
         console.log(`💰 Precios: ${prices}`);
         console.log(`📈 Ciclo: ${gameState.economicCycle} | Volatilidad: ${(gameState.marketVolatility * 100).toFixed(2)}%`);
         console.log(`🤖 Bots: ${gameState.bots.size} estándar, ${gameState.qLearningBots.size} Q-Learning`);
         console.log(`👥 Jugadores: ${gameState.players.size} humanos`);
         
+        if (observationStatus.activeEvents.length > 0) {
+            console.log(`🌍 Eventos progresivos activos: ${observationStatus.activeEvents.length}`);
+        }
+        
+        if (observationStatus.observationEnabled) {
+            console.log(`👁️ Bots observados: ${observationStatus.observedBots.length}`);
+        }
+        
         if (event) {
-            console.log(`🌍 Evento: ${event.name} afecta ${event.resource}`);
+            console.log(`🌍 Evento normal: ${event.name} afecta ${event.resource}`);
         }
         
         if (gameState.analytics.cartelAlerts.length > 0) {
@@ -1449,18 +1514,56 @@ async function economicTick() {
 // WebSocket connections
 io.on('connection', (socket) => {
     console.log(`🔌 Usuario conectado: ${socket.id}`);
+socket.isAdmin = false;
+    socket.userType = 'guest';
+    socket.playerName = null;
 
+    // ====================================
+    // HANDLER PARA JUGADORES NORMALES
+    // ====================================
     socket.on('register', async (playerData) => {
         try {
-        const player = new AdvancedPlayer(socket.id, playerData.name || `Player_${socket.id.substring(0, 6)}`);
-        gameState.players.set(socket.id, player);
-        
-        // 🔧 REGISTRAR JUGADOR EN BD INMEDIATAMENTE
-        if (DatabaseManager && DatabaseManager.ensurePlayerExists) {
-            await DatabaseManager.ensurePlayerExists(socket.id, player.name, false);
-            console.log(`📝 Jugador ${player.name} registrado en BD`);
-        }
+            console.log(`👤 Solicitud de registro de jugador:`, playerData);
             
+            // Verificar que no sea un admin intentando registrarse como jugador
+            if (socket.isAdmin) {
+                console.warn(`⚠️ Admin ${socket.id} intentando registrarse como jugador`);
+                socket.emit('error', { message: 'Los administradores no pueden registrarse como jugadores' });
+                return;
+            }
+
+            // Validar datos del jugador
+            if (!playerData.name || playerData.name.trim().length === 0) {
+                console.warn(`⚠️ Nombre de jugador inválido:`, playerData);
+                socket.emit('error', { message: 'Nombre de jugador requerido' });
+                return;
+            }
+
+            const playerName = playerData.name.trim();
+            console.log(`✅ Creando jugador: ${playerName}`);
+            
+            // Crear jugador
+            const player = new AdvancedPlayer(socket.id, playerName);
+            gameState.players.set(socket.id, player);
+            
+            // Marcar socket como jugador
+            socket.userType = 'player';
+            socket.playerName = playerName;
+            
+            console.log(`📝 Jugador ${playerName} agregado al estado del juego`);
+            
+            // Registrar en base de datos si está disponible
+            if (DatabaseManager && DatabaseManager.ensurePlayerExists) {
+                try {
+                    await DatabaseManager.ensurePlayerExists(socket.id, playerName, false);
+                    console.log(`💾 Jugador ${playerName} registrado en BD`);
+                } catch (dbError) {
+                    console.warn(`⚠️ Error BD para ${playerName}:`, dbError.message);
+                    // Continuar sin BD
+                }
+            }
+            
+            // Enviar confirmación de registro exitoso
             socket.emit('registered', {
                 player: player,
                 gameState: {
@@ -1477,23 +1580,74 @@ io.on('connection', (socket) => {
                 }
             });
             
+            // Notificar a otros jugadores
             socket.broadcast.emit('player_joined', {
                 player: { id: player.id, name: player.name }
             });
             
-            // Enviar datos iniciales
-            setTimeout(() => {
-                socket.emit('get_leaderboard');
-                socket.emit('get_market_analytics');
-            }, 500);
-            
-            console.log(`👤 Jugador registrado: ${player.name}`);
+            console.log(`🎉 Jugador ${playerName} registrado exitosamente`);
             
         } catch (error) {
-            console.error('❌ Error registrando jugador:', error);
-            socket.emit('error', { message: 'Error al registrar' });
+            console.error(`❌ Error registrando jugador:`, error);
+            socket.emit('error', { 
+                message: 'Error interno del servidor al registrar jugador'
+            });
         }
     });
+
+    // ====================================
+    // HANDLER PARA ADMINISTRADORES
+    // ====================================
+    socket.on('admin_connect', (data) => {
+        try {
+            console.log(`👑 Solicitud de autenticación admin:`, data);
+            
+            const validCredentials = ['admin', 'administrator', 'ADMIN', 'root', 'superuser'];
+            
+            if (!data.username || !validCredentials.includes(data.username)) {
+                console.warn(`⚠️ Credenciales admin inválidas: ${data.username}`);
+                socket.emit('admin_authentication_failed', {
+                    message: 'Credenciales de administrador inválidas'
+                });
+                return;
+            }
+            
+            // Marcar como admin
+            socket.isAdmin = true;
+            socket.userType = 'admin';
+            socket.adminName = data.username;
+            
+            console.log(`✅ Administrador autenticado: ${data.username}`);
+            
+            // Confirmar autenticación
+            socket.emit('admin_authenticated', {
+                success: true,
+                username: data.username,
+                permissions: ['full_access'],
+                timestamp: Date.now()
+            });
+            
+            // Enviar estado inicial de la simulación
+            setTimeout(() => {
+                socket.emit('admin_simulation_status', {
+                    totalBots: gameState.bots.size + gameState.qLearningBots.size,
+                    activePlayers: gameState.players.size,
+                    currentTick: gameState.tick,
+                    isRunning: gameState.isRunning,
+                    isPaused: gameState.isPaused,
+                    volatility: gameState.marketVolatility || 0,
+                    economicCycle: gameState.economicCycle || 'expansion'
+                });
+            }, 500);
+            
+        } catch (error) {
+            console.error(`❌ Error en autenticación admin:`, error);
+            socket.emit('admin_authentication_failed', {
+                message: 'Error interno del servidor'
+            });
+        }
+    
+});
 
     socket.on('trade', async (tradeData) => {
     try {
@@ -1651,9 +1805,149 @@ io.on('connection', (socket) => {
         }
     });
 
+   socket.on('admin_trigger_progressive_event', (data) => {
+    if (!socket.isAdmin) {
+        socket.emit('error', { message: 'Acceso no autorizado' });
+        return;
+    }
     
+    try {
+        console.log('🌍 Admin activando evento progresivo:', data);
+        
+        const result = triggerAdminEvent(data.eventId, gameState, io);
+        
+        if (result.success) {
+            socket.emit('admin_operation_result', {
+                success: true,
+                message: `Evento "${result.event.name}" iniciado como evento progresivo`,
+                data: {
+                    eventId: data.eventId,
+                    eventName: result.event.name,
+                    progressData: result.progressData,
+                    affectedResources: result.event.resources
+                }
+            });
+            
+            console.log(`✅ Evento progresivo iniciado por admin: ${result.event.name}`);
+        } else {
+            socket.emit('admin_operation_result', {
+                success: false,
+                message: result.message
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Error activando evento progresivo:', error);
+        socket.emit('error', { 
+            message: 'Error activando evento progresivo: ' + error.message 
+        });
+    }
+});
 
-    // 🔧 CORRECCIÓN: Mover aquí todos los manejadores de socket
+socket.on('admin_start_bot_observation', (data) => {
+    if (!socket.isAdmin) {
+        socket.emit('error', { message: 'Acceso no autorizado' });
+        return;
+    }
+    
+    try {
+        const { botId, botIds } = data;
+        
+        if (botId) {
+            const bot = gameState.qLearningBots.get(botId);
+            if (bot) {
+                enableBotObservation(botId, bot, io);
+                socket.emit('admin_operation_result', {
+                    success: true,
+                    message: `Observación iniciada para ${bot.name}`
+                });
+            } else {
+                socket.emit('error', { message: 'Bot no encontrado' });
+            }
+        } else {
+            let observedCount = 0;
+            gameState.qLearningBots.forEach((bot, botId) => {
+                enableBotObservation(botId, bot, io);
+                observedCount++;
+            });
+            
+            socket.emit('admin_operation_result', {
+                success: true,
+                message: `Observación iniciada para todos los bots (${observedCount})`
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Error iniciando observación:', error);
+        socket.emit('error', { message: 'Error iniciando observación' });
+    }
+});
+
+socket.on('admin_stop_bot_observation', (data) => {
+    if (!socket.isAdmin) {
+        socket.emit('error', { message: 'Acceso no autorizado' });
+        return;
+    }
+    
+    try {
+        const { botId } = data;
+        
+        if (botId) {
+            const bot = gameState.qLearningBots.get(botId);
+            if (bot) {
+                disableBotObservation(botId, bot);
+                socket.emit('admin_operation_result', {
+                    success: true,
+                    message: `Observación detenida para ${bot.name}`
+                });
+            }
+        } else {
+            gameState.qLearningBots.forEach((bot, botId) => {
+                disableBotObservation(botId, bot);
+            });
+            
+            socket.emit('admin_operation_result', {
+                success: true,
+                message: 'Observación detenida para todos los bots'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Error deteniendo observación:', error);
+        socket.emit('error', { message: 'Error deteniendo observación' });
+    }
+});
+
+socket.on('admin_get_observation_status', () => {
+    if (!socket.isAdmin) return;
+    
+    try {
+        const status = getObservationStatus();
+        socket.emit('admin_observation_status', {
+            status: status,
+            timestamp: Date.now()
+        });
+    } catch (error) {
+        console.error('❌ Error obteniendo estado de observación:', error);
+        socket.emit('error', { message: 'Error obteniendo estado de observación' });
+    }
+});
+
+socket.on('admin_get_adaptation_metrics', () => {
+    if (!socket.isAdmin) return;
+    
+    try {
+        const metrics = getAdaptationMetrics();
+        socket.emit('admin_adaptation_metrics', {
+            metrics: metrics,
+            timestamp: Date.now()
+        });
+    } catch (error) {
+        console.error('❌ Error obteniendo métricas de adaptación:', error);
+        socket.emit('error', { message: 'Error obteniendo métricas de adaptación' });
+    }
+});
+
     socket.on('pause_simulation', () => {
         gameState.isPaused = true;
         gameState.isAnalysisMode = true;
@@ -1953,6 +2247,40 @@ socket.on('get_reputation_report', () => {
             socket.emit('error', { message: 'Error deteniendo simulación' });
         }
     });
+   socket.on('admin_configure_bots', async (config) => {
+    if (!socket.isAdmin) {
+        socket.emit('error', { message: 'Acceso no autorizado' });
+        return;
+    }
+    
+    try {
+        console.log('🤖 Administrador solicitó configuración de bots:', config);
+        
+        // Validar que la configuración sea válida
+        if (!config || typeof config !== 'object') {
+            socket.emit('error', { message: 'Configuración de bots inválida' });
+            return;
+        }
+        
+        // Aplicar la configuración usando nuestras funciones corregidas
+        const result = applyBotConfigurationComplete(
+            config,           // La configuración del admin
+            gameState,        // Estado del juego
+            simulationManager, // Manager de simulación
+            io,              // Socket.io para comunicación
+            socket.id        // ID del admin que hizo la solicitud
+        );
+        
+        console.log('✅ Proceso de configuración de bots completado:', 
+                   result.success ? 'EXITOSO' : 'FALLÓ');
+        
+    } catch (error) {
+        console.error('❌ Error procesando configuración de bots:', error);
+        socket.emit('error', { 
+            message: 'Error interno configurando bots: ' + error.message 
+        });
+    }
+});
 
     socket.on('generate_bot_comparison', () => {
         try {
@@ -2297,6 +2625,18 @@ app.get('/', (req, res) => {
     }
 });
 
+app.get('/progressive-events', (req, res) => {
+    const progressivePath = path.join(__dirname, '../client/admin-panel-enhanced.html');
+    console.log(`Serving progressive events panel from: ${progressivePath}`);
+    
+    if (require('fs').existsSync(progressivePath)) {
+        res.sendFile(progressivePath);
+    } else {
+        console.error(`❌ Progressive events panel not found at: ${progressivePath}`);
+        res.status(404).send('Progressive events panel not found');
+    }
+});
+
 app.get('/advanced-control', (req, res) => {
     const advancedPath = path.join(__dirname, '../client/advanced-control.html');
     console.log(`Serving advanced control from: ${advancedPath}`);
@@ -2379,6 +2719,14 @@ app.get('/api/analytics-report', async (req, res) => {
         console.error('Error generating analytics report:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
+});
+
+app.get('/api/admin/verify', (req, res) => {
+    res.json({ 
+        adminEnabled: true, 
+        version: '1.0.0',
+        timestamp: Date.now()
+    });
 });
 
 app.post('/api/simulation-control', (req, res) => {
@@ -2742,6 +3090,359 @@ app.get('/api/system-logs', (req, res) => {
     }
 });
 
+function clearAllExistingBots(gameState) {
+    console.log('🗑️ Iniciando limpieza de bots existentes...');
+    
+    let removedCount = 0;
+    
+    // Eliminar bots estándar
+    gameState.bots.forEach((bot, botId) => {
+        console.log(`🗑️ Eliminando bot estándar: ${bot.name}`);
+        removedCount++;
+    });
+    gameState.bots.clear();
+    
+    // Eliminar Q-Learning bots
+    gameState.qLearningBots.forEach((bot, botId) => {
+        console.log(`🗑️ Eliminando Q-Learning bot: ${bot.name}`);
+        removedCount++;
+    });
+    gameState.qLearningBots.clear();
+    
+    // Limpiar métricas de performance si existen
+    if (gameState.analytics && gameState.analytics.performanceMetrics) {
+        gameState.analytics.performanceMetrics.clear();
+    }
+    
+    console.log(`✅ Limpieza completada: ${removedCount} bots eliminados`);
+    return removedCount;
+}
+
+// Función para crear bots estándar con estrategia específica
+function createStandardBotsWithStrategy(count, strategy, gameState) {
+    console.log(`🎯 Creando ${count} bots estándar con estrategia: ${strategy}`);
+    
+    const createdBots = [];
+    
+    for (let i = 1; i <= count; i++) {
+        try {
+            // Crear nombre único basado en estrategia y número
+            const strategyPrefix = strategy.charAt(0).toUpperCase() + strategy.slice(1);
+            const botName = `${strategyPrefix}_Bot_${i}`;
+            
+            // Crear el bot usando la clase EnhancedBot que ya tienes definida
+            const bot = new EnhancedBot(botName, strategy);
+            
+            // Configurar propiedades específicas según la estrategia elegida
+            configureBotPersonality(bot, strategy);
+            
+            // Agregar el bot al estado del juego
+            gameState.bots.set(bot.id, bot);
+            
+            // Registrar información del bot creado
+            createdBots.push({
+                id: bot.id,
+                name: bot.name,
+                strategy: bot.strategy,
+                riskTolerance: bot.personality.riskTolerance,
+                patience: bot.patience
+            });
+            
+            console.log(`✅ Bot estándar creado exitosamente: ${bot.name} (${bot.strategy})`);
+            
+        } catch (error) {
+            console.error(`❌ Error creando bot estándar número ${i}:`, error.message);
+        }
+    }
+    
+    console.log(`📊 Resumen: ${createdBots.length}/${count} bots estándar creados correctamente`);
+    return createdBots;
+}
+
+// Función auxiliar para configurar la personalidad de cada bot según su estrategia
+function configureBotPersonality(bot, strategy) {
+    switch (strategy) {
+        case 'conservative':
+            // Bots conservadores: bajo riesgo, alta paciencia, poca codicia
+            bot.personality.riskTolerance = Math.random() * 0.3 + 0.1; // 0.1 a 0.4
+            bot.personality.greed = Math.random() * 0.3 + 0.2; // 0.2 a 0.5
+            bot.personality.patience = Math.random() * 0.4 + 0.6; // 0.6 a 1.0
+            bot.patience = Math.random() * 25000 + 15000; // 15 a 40 segundos
+            break;
+            
+        case 'aggressive':
+            // Bots agresivos: alto riesgo, baja paciencia, alta codicia
+            bot.personality.riskTolerance = Math.random() * 0.3 + 0.7; // 0.7 a 1.0
+            bot.personality.greed = Math.random() * 0.4 + 0.6; // 0.6 a 1.0
+            bot.personality.patience = Math.random() * 0.3 + 0.1; // 0.1 a 0.4
+            bot.patience = Math.random() * 10000 + 5000; // 5 a 15 segundos
+            break;
+            
+        case 'balanced':
+            // Bots balanceados: riesgo medio, paciencia media
+            bot.personality.riskTolerance = Math.random() * 0.4 + 0.3; // 0.3 a 0.7
+            bot.personality.greed = Math.random() * 0.4 + 0.3; // 0.3 a 0.7
+            bot.personality.patience = Math.random() * 0.4 + 0.4; // 0.4 a 0.8
+            bot.patience = Math.random() * 20000 + 10000; // 10 a 30 segundos
+            break;
+            
+        case 'contrarian':
+            // Bots contrarios: baja influencia social, alta memoria
+            bot.personality.riskTolerance = Math.random() * 0.4 + 0.3; // 0.3 a 0.7
+            bot.personality.socialInfluence = Math.random() * 0.2; // 0 a 0.2 (muy bajo)
+            bot.personality.memory = Math.random() * 0.2 + 0.8; // 0.8 a 1.0 (muy alto)
+            bot.patience = Math.random() * 30000 + 20000; // 20 a 50 segundos
+            break;
+            
+        case 'arbitrageur':
+            // Bots arbitrajistas: alta memoria, mucha paciencia, precisión
+            bot.personality.memory = Math.random() * 0.2 + 0.8; // 0.8 a 1.0
+            bot.personality.patience = Math.random() * 0.3 + 0.7; // 0.7 a 1.0
+            bot.personality.overconfidence = Math.random() * 0.2 + 0.1; // 0.1 a 0.3 (bajo)
+            bot.patience = Math.random() * 15000 + 25000; // 25 a 40 segundos
+            break;
+            
+        default:
+            // Configuración por defecto (balanceada)
+            bot.personality.riskTolerance = 0.5;
+            bot.personality.greed = 0.5;
+            bot.personality.patience = 0.5;
+            bot.patience = 15000; // 15 segundos
+    }
+}
+
+// Función para crear Q-Learning bots con estrategia específica
+function createQLearningBotsWithStrategy(count, strategy, gameState, simulationManager) {
+    console.log(`🧠 Creando ${count} Q-Learning bots con estrategia: ${strategy}`);
+    
+    if (!simulationManager) {
+        console.error('❌ SimulationManager no está disponible para crear Q-Learning bots');
+        return [];
+    }
+    
+    const createdBots = [];
+    
+    for (let i = 1; i <= count; i++) {
+        try {
+            // Crear nombre único basado en estrategia
+            const strategyName = strategy.split('_')[2] || 'adaptive'; // Extrae 'aggressive', 'conservative', etc.
+            const botName = `AI_${strategyName.charAt(0).toUpperCase() + strategyName.slice(1)}_${i}`;
+            
+            // Crear el bot usando el simulation manager
+            const bot = simulationManager.addQLearningBot(botName, strategy);
+            
+            if (bot) {
+                // Configurar parámetros de aprendizaje específicos según estrategia
+                configureQLearningParameters(bot, strategy);
+                
+                // Asegurar que el bot esté registrado en gameState
+                gameState.qLearningBots.set(bot.id, bot);
+                
+                // Registrar información del bot creado
+                createdBots.push({
+                    id: bot.id,
+                    name: bot.name,
+                    strategy: bot.strategy,
+                    qTableSize: bot.qTable ? bot.qTable.size : 0,
+                    epsilon: bot.epsilon,
+                    alpha: bot.alpha,
+                    gamma: bot.gamma
+                });
+                
+                console.log(`✅ Q-Learning bot creado exitosamente: ${bot.name} (${bot.strategy})`);
+            } else {
+                console.error(`❌ No se pudo crear Q-Learning bot número ${i}`);
+            }
+            
+        } catch (error) {
+            console.error(`❌ Error creando Q-Learning bot número ${i}:`, error.message);
+        }
+    }
+    
+    console.log(`📊 Resumen: ${createdBots.length}/${count} Q-Learning bots creados correctamente`);
+    return createdBots;
+}
+
+// Función auxiliar para configurar parámetros de Q-Learning según estrategia
+function configureQLearningParameters(bot, strategy) {
+    switch (strategy) {
+        case 'q_learning_aggressive':
+            // Aprendizaje rápido, más exploración, menos enfoque en futuro
+            bot.alpha = 0.15; // Tasa de aprendizaje alta
+            bot.gamma = 0.9; // Factor de descuento medio
+            bot.epsilon = 0.4; // Exploración alta
+            bot.personality.riskTolerance = 0.8;
+            break;
+            
+        case 'q_learning_conservative':
+            // Aprendizaje lento, menos exploración, más enfoque en futuro
+            bot.alpha = 0.05; // Tasa de aprendizaje baja
+            bot.gamma = 0.98; // Factor de descuento alto
+            bot.epsilon = 0.2; // Exploración baja
+            bot.personality.riskTolerance = 0.3;
+            break;
+            
+        case 'q_learning_adaptive':
+            // Parámetros balanceados que se adaptan
+            bot.alpha = 0.1; // Tasa de aprendizaje media
+            bot.gamma = 0.95; // Factor de descuento balanceado
+            bot.epsilon = 0.3; // Exploración moderada
+            bot.personality.riskTolerance = 0.5;
+            break;
+            
+        case 'q_learning_contrarian':
+            // Parámetros para estrategia contraria
+            bot.alpha = 0.08; // Aprendizaje ligeramente lento
+            bot.gamma = 0.92; // Enfoque en mediano plazo
+            bot.epsilon = 0.25; // Exploración controlada
+            bot.personality.riskTolerance = 0.4;
+            break;
+            
+        default:
+            // Configuración por defecto
+            bot.alpha = 0.1;
+            bot.gamma = 0.95;
+            bot.epsilon = 0.3;
+            bot.personality.riskTolerance = 0.5;
+    }
+}
+
+// Función principal para aplicar configuración completa de bots
+function applyBotConfigurationComplete(config, gameState, simulationManager, io, adminSocketId) {
+    console.log('🔧 Aplicando configuración ADITIVA de bots...');
+    console.log('📋 Configuración recibida:', JSON.stringify(config, null, 2));
+    
+    try {
+        // 🔧 CAMBIO: NO limpiar bots existentes, solo agregar nuevos
+        console.log('📊 Estado actual:');
+        console.log(`   - Bots estándar existentes: ${gameState.bots.size}`);
+        console.log(`   - Q-Learning bots existentes: ${gameState.qLearningBots.size}`);
+        
+        // FASE 1: Crear bots estándar ADICIONALES si se solicitaron
+        console.log('🎯 FASE 1: Agregando bots estándar...');
+        let standardBots = [];
+        if (config.standard && config.standard.count > 0) {
+            const maxStandardBots = Math.min(config.standard.count, 10);
+            const strategy = config.standard.strategy || 'balanced';
+            
+            console.log(`   Creando ${maxStandardBots} bots estándar adicionales con estrategia: ${strategy}`);
+            standardBots = createStandardBotsWithStrategy(maxStandardBots, strategy, gameState);
+        }
+        
+        // FASE 2: Crear Q-Learning bots ADICIONALES si se solicitaron
+        console.log('🧠 FASE 2: Agregando Q-Learning bots...');
+        let qlearningBots = [];
+        if (config.qlearning && config.qlearning.count > 0) {
+            const maxQLearningBots = Math.min(config.qlearning.count, 10);
+            const strategy = config.qlearning.strategy || 'q_learning_adaptive';
+            
+            console.log(`   Creando ${maxQLearningBots} Q-Learning bots adicionales con estrategia: ${strategy}`);
+            qlearningBots = createQLearningBotsWithStrategy(maxQLearningBots, strategy, gameState, simulationManager);
+        }
+        
+        // FASE 3: Compilar resultados
+        const totalCreated = standardBots.length + qlearningBots.length;
+        const totalExisting = gameState.bots.size + gameState.qLearningBots.size;
+        
+        console.log('📊 RESULTADOS:');
+        console.log(`   ✅ Bots estándar agregados: ${standardBots.length}`);
+        console.log(`   ✅ Q-Learning bots agregados: ${qlearningBots.length}`);
+        console.log(`   ✅ Total creados en esta operación: ${totalCreated}`);
+        console.log(`   📈 Total de bots ahora en el sistema: ${totalExisting}`);
+        
+        const result = {
+            success: true,
+            message: `${totalCreated} bots agregados exitosamente (Total: ${totalExisting})`,
+            statistics: {
+                added: {
+                    standard: standardBots.length,
+                    qlearning: qlearningBots.length,
+                    total: totalCreated
+                },
+                currentTotals: {
+                    standard: gameState.bots.size,
+                    qlearning: gameState.qLearningBots.size,
+                    total: totalExisting
+                }
+            },
+            bots: {
+                standard: standardBots,
+                qlearning: qlearningBots
+            },
+            timestamp: Date.now()
+        };
+        
+        // Notificar resultados
+        const adminSocket = io.sockets.sockets.get(adminSocketId);
+        if (adminSocket) {
+            adminSocket.emit('admin_operation_result', result);
+        }
+        
+        // Notificar actualización a todos los clientes
+        io.emit('bots_updated', {
+            qlearning: gameState.qLearningBots.size,
+            standard: gameState.bots.size,
+            total: totalExisting
+        });
+        
+        console.log('🎉 ¡Configuración de bots aplicada exitosamente!');
+        return result;
+        
+    } catch (error) {
+        console.error('❌ Error aplicando configuración de bots:', error);
+        
+        const errorResult = {
+            success: false,
+            message: 'Error aplicando configuración: ' + error.message,
+            error: error.message,
+            timestamp: Date.now()
+        };
+        
+        const adminSocket = io.sockets.sockets.get(adminSocketId);
+        if (adminSocket) {
+            adminSocket.emit('admin_operation_result', errorResult);
+        }
+        
+        return errorResult;
+    }
+}
+
+// Función para eliminar bots específicos por ID o tipo
+function removeBotsByType(type, count = 'all', gameState) {
+    console.log(`🗑️ Eliminando bots de tipo: ${type}, cantidad: ${count}`);
+    
+    let removed = 0;
+    
+    if (type === 'standard' || type === 'all') {
+        if (count === 'all') {
+            removed += gameState.bots.size;
+            gameState.bots.clear();
+        } else {
+            const botsToRemove = Array.from(gameState.bots.keys()).slice(0, count);
+            botsToRemove.forEach(botId => {
+                gameState.bots.delete(botId);
+                removed++;
+            });
+        }
+    }
+    
+    if (type === 'qlearning' || type === 'all') {
+        if (count === 'all') {
+            removed += gameState.qLearningBots.size;
+            gameState.qLearningBots.clear();
+        } else {
+            const botsToRemove = Array.from(gameState.qLearningBots.keys()).slice(0, count);
+            botsToRemove.forEach(botId => {
+                gameState.qLearningBots.delete(botId);
+                removed++;
+            });
+        }
+    }
+    
+    console.log(`✅ ${removed} bots eliminados`);
+    return removed;
+}
+
 // Iniciar servidor
 async function startServer() {
     console.log('🚀 Iniciando Simulador Económico Integrado...');
@@ -2752,9 +3453,13 @@ async function startServer() {
     // Inicializar sistemas avanzados
     await initializeSystems();
     
+
+    setupAdminSocketHandlers(io, gameState, simulationManager);
+    
+    
     // Crear bots
-    createStandardBots();
-    createQLearningBots();
+    //createStandardBots();
+    //createQLearningBots();
     
     // Programar tareas del sistema
     scheduleSystemTasks();
@@ -2777,6 +3482,8 @@ async function startServer() {
         resources: gameState.resources.length,
         port: PORT
     });
+    
+
     
     // Iniciar servidor HTTP
     server.listen(PORT, () => {
