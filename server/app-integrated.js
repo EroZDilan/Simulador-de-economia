@@ -984,11 +984,13 @@ function generateMarketEvent() {
             type: selectedEvent.type,
             name: selectedEvent.name,
             resource: affectedResource,
-            effect: {  // ✅ Asegurar que effect sea un objeto válido
+            effect: {  // ✅ Siempre crear object válido
                 supply: selectedEvent.supply,
                 demand: selectedEvent.demand,
-                originalSupply: market.supply,
-                originalDemand: market.demand
+                appliedSupplyChange: market.supply - originalSupply,
+                appliedDemandChange: market.demand - originalDemand,
+                originalSupply: originalSupply,
+                originalDemand: originalDemand
             },
             tick: gameState.tick,
             timestamp: Date.now(),
@@ -1005,11 +1007,10 @@ function generateMarketEvent() {
         // 🔧 CORRECCIÓN: Guardar en BD con manejo de errores mejorado
         if (DatabaseManager && DatabaseManager.saveMarketEvent) {
             DatabaseManager.saveMarketEvent(eventData, gameState.tick).catch(error => {
-                console.warn('⚠️ No se pudo guardar evento en BD (continuando):', error.message);
+                console.warn('⚠️ No se pudo guardar evento en BD:', error.message);
             });
         }
         
-        console.log(`🌍 Evento: ${eventData.name} afecta ${affectedResource}`);
         return eventData;
     }
     
@@ -1452,7 +1453,18 @@ async function economicTick() {
         }
         
         // 9. Enviar actualizaciones a clientes con información de eventos progresivos
-        const observationStatus = getObservationStatus();
+        let observationStatus;
+        try {
+            observationStatus = getObservationStatus();
+        } catch (error) {
+            console.warn('⚠️ Error obteniendo estado de observación:', error.message);
+            // Crear observationStatus por defecto si falla
+            observationStatus = {
+                activeEvents: [],
+                observedBots: [],
+                observationEnabled: false
+            };
+        }
         
         const tickData = {
             tick: gameState.tick,
@@ -1475,9 +1487,9 @@ async function economicTick() {
             },
             // Información de eventos progresivos y observación
             progressiveEvents: {
-                active: observationStatus.activeEvents.length,
-                observedBots: observationStatus.observedBots.length,
-                observationEnabled: observationStatus.observationEnabled
+                active: (observationStatus.activeEvents && observationStatus.activeEvents.length) || 0,
+                observedBots: (observationStatus.observedBots && observationStatus.observedBots.length) || 0,
+                observationEnabled: observationStatus.observationEnabled || false
             }
         };
         
@@ -1490,7 +1502,8 @@ async function economicTick() {
         console.log(`🤖 Bots: ${gameState.bots.size} estándar, ${gameState.qLearningBots.size} Q-Learning`);
         console.log(`👥 Jugadores: ${gameState.players.size} humanos`);
         
-        if (observationStatus.activeEvents.length > 0) {
+        // 🔧 CORRECCIÓN: Validar antes de usar
+        if (observationStatus.activeEvents && observationStatus.activeEvents.length > 0) {
             console.log(`🌍 Eventos progresivos activos: ${observationStatus.activeEvents.length}`);
         }
         

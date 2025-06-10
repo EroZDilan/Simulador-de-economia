@@ -1,0 +1,40 @@
+{
+  "sessionSummary": {
+    "duration": 68765,
+    "totalTicks": 3,
+    "participantCounts": {
+      "humans": 0,
+      "standardBots": 0,
+      "qLearningBots": 0
+    },
+    "totalVolume": 0,
+    "totalTransactions": 0
+  },
+  "finalPerformances": [],
+  "marketSummary": {
+    "finalPrices": {
+      "agua": 10,
+      "comida": 15,
+      "energia": 20,
+      "materiales": 26
+    },
+    "finalVolatility": 0,
+    "finalCycle": "expansion"
+  },
+  "qLearningProgress": [],
+  "riskAnalysis": {
+    "timestamp": 1749561366119,
+    "totalBots": 0,
+    "riskDistribution": {
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "extreme": 0
+    },
+    "averageRiskScore": 0,
+    "activeAlerts": 0,
+    "highRiskBots": [],
+    "recommendations": []
+  },
+  "cartelAlerts": []
+}

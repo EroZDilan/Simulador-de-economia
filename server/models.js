@@ -429,45 +429,77 @@ class DatabaseManager {
 
     // 🔧 CORRECCIÓN: Método mejorado para guardar transacciones
     static async saveTransaction(playerId, transactionData, playerName = null) {
-        if (!this.isEnabled) return null;
-        
-        // Usar la cola para transacciones también
-        return await dbQueue.add(async () => {
-            try {
-                // Preparar datos de transacción
-                const transactionId = transactionData.id || require('uuid').v4();
-                
-                const cleanData = {
-                    transactionId: String(transactionId),
-                    playerId: String(playerId),
-                    playerName: playerName || 'Unknown',
-                    type: String(transactionData.type),
-                    resource: String(transactionData.resource),
-                    quantity: parseInt(transactionData.quantity) || 0,
-                    price: parseFloat(transactionData.price) || 0,
-                    totalValue: parseFloat(transactionData.totalValue) || 0,
-                    tick: parseInt(transactionData.tick) || 0,
-                    profit: parseFloat(transactionData.profit) || 0
-                };
-
-                // Validar datos
-                if (!cleanData.playerId || !cleanData.type || !cleanData.resource) {
-                    console.warn('⚠️ Datos inválidos para transacción');
-                    return null;
-                }
-
-                // Guardar transacción con timeout
-                const transaction = await Transaction.create(cleanData, { timeout: 3000 });
-                console.log(`💾 Transacción guardada: ${cleanData.type} ${cleanData.quantity} ${cleanData.resource}`);
-                
-                return transaction;
-                
-            } catch (error) {
-                console.error('❌ Error guardando transacción:', error.message);
+    if (!this.isEnabled) return null;
+    
+    return await dbQueue.add(async () => {
+        try {
+            // 🔧 CORRECCIÓN: Validación más robusta y generación de ID único
+            const transactionId = transactionData.id || 
+                                 transactionData.transactionId || 
+                                 require('crypto').randomUUID();
+            
+            // Validar datos esenciales antes de procesar
+            if (!playerId || !transactionData.type || !transactionData.resource) {
+                console.warn('⚠️ Datos de transacción incompletos:', {
+                    playerId: !!playerId,
+                    type: !!transactionData.type,
+                    resource: !!transactionData.resource
+                });
                 return null;
             }
-        });
-    }
+
+            const cleanData = {
+                transactionId: String(transactionId),
+                playerId: String(playerId),
+                playerName: playerName || `Player_${String(playerId).substring(0, 8)}`,
+                type: String(transactionData.type),
+                resource: String(transactionData.resource),
+                quantity: Math.max(0, parseInt(transactionData.quantity) || 0),
+                price: Math.max(0, parseFloat(transactionData.price) || 0),
+                totalValue: Math.max(0, parseFloat(transactionData.totalValue) || 0),
+                tick: Math.max(0, parseInt(transactionData.tick) || 0),
+                profit: parseFloat(transactionData.profit) || 0
+            };
+
+            // Validar que los valores numéricos sean válidos
+            if (cleanData.quantity <= 0 || cleanData.price <= 0) {
+                console.warn('⚠️ Valores inválidos en transacción:', cleanData);
+                return null;
+            }
+
+            // 🔧 CORRECCIÓN: Verificar duplicados antes de insertar
+            const existingTransaction = await Transaction.findOne({
+                where: { transactionId: cleanData.transactionId }
+            });
+
+            if (existingTransaction) {
+                console.log(`⚠️ Transacción duplicada detectada: ${cleanData.transactionId}`);
+                return existingTransaction;
+            }
+
+            // Guardar transacción con timeout
+            const transaction = await Transaction.create(cleanData, { timeout: 3000 });
+            console.log(`💾 Transacción guardada: ${cleanData.type} ${cleanData.quantity} ${cleanData.resource}`);
+            
+            return transaction;
+            
+        } catch (error) {
+            // 🔧 CORRECCIÓN: Mejor manejo de errores de validación
+            if (error.name === 'SequelizeValidationError') {
+                console.error('❌ Error de validación en transacción:', {
+                    message: error.message,
+                    errors: error.errors?.map(e => e.message) || []
+                });
+            } else if (error.name === 'SequelizeUniqueConstraintError') {
+                console.warn('⚠️ Transacción duplicada (constraint):', error.message);
+                return null; // No es un error crítico
+            } else {
+                console.error('❌ Error guardando transacción:', error.message);
+            }
+            return null;
+        }
+    });
+}
 
     // 🔧 CORRECCIÓN: Método para registrar bots en BD
     static async registerBot(bot) {
@@ -575,6 +607,8 @@ class DatabaseManager {
             return null;
         }
     }
+
+    
 
     static async resetDatabase() {
         try {

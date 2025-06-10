@@ -106,7 +106,6 @@
             margin-bottom: 10px;
         }
 
-        /* Controles extendidos para bots */
         .bot-controls-extended {
             display: flex;
             gap: 10px;
@@ -146,7 +145,6 @@
             text-align: center;
         }
 
-        /* Controles de eliminación específica */
         .elimination-controls {
             display: flex;
             gap: 5px;
@@ -162,7 +160,6 @@
             min-width: auto;
         }
 
-        /* Display de bots activos */
         .active-bots-display {
             margin-top: 8px;
             padding: 5px 10px;
@@ -362,6 +359,195 @@
         .log-warning { color: #fdcb6e; }
         .log-error { color: #ff6b6b; }
 
+        /* ========== ESTILOS DEL MODAL DE CONFIRMACIÓN ========== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000; /* Mayor que las notificaciones */
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            transform: scale(0.8) translateY(20px);
+            transition: all 0.3s ease;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .modal-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #74b9ff;
+            margin-bottom: 10px;
+        }
+
+        .modal-subtitle {
+            color: #ddd;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .event-details {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #fdcb6e;
+        }
+
+        .event-details .event-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fdcb6e;
+            margin-bottom: 10px;
+        }
+
+        .event-details .event-description {
+            color: #ddd;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .event-effects {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .effect-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .effect-label {
+            color: #74b9ff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .effect-value {
+            color: #00b894;
+            font-weight: bold;
+        }
+
+        .effect-negative {
+            color: #ff6b6b;
+        }
+
+        .resources-affected {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(116, 185, 255, 0.2);
+            border-radius: 8px;
+        }
+
+        .resources-label {
+            color: #74b9ff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .resources-list {
+            color: #ddd;
+            text-transform: capitalize;
+        }
+
+        .rarity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        .rarity-legendary {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .rarity-epic {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+            color: white;
+        }
+
+        .rarity-rare {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+            margin: 0; /* Resetear margin del btn general */
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ddd;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: linear-gradient(45deg, #00a085, #00b894);
+        }
+
         /* Responsive design */
         @media (max-width: 768px) {
             .control-grid {
@@ -384,6 +570,15 @@
                 border-left: none;
                 border-top: 1px solid rgba(255, 255, 255, 0.3);
                 padding-top: 8px;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .event-effects {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -575,7 +770,7 @@
                 Como administrador, puedes activar eventos económicos únicos para probar la adaptabilidad de los agentes
             </p>
             
-            <div class="events-grid">
+            <div class="events-grid" id="eventsGrid">
                 <!-- Los eventos se llenarán dinámicamente -->
             </div>
         </div>
@@ -592,6 +787,30 @@
         </div>
     </div>
 
+    <!-- Modal de Confirmación de Eventos -->
+    <div id="eventModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-icon" id="modalIcon">🌍</span>
+                <div class="modal-title">¿Activar evento especial?</div>
+                <div class="modal-subtitle">Este evento afectará el mercado de manera significativa</div>
+            </div>
+
+            <div class="event-details" id="eventDetails">
+                <!-- Los detalles del evento se llenarán dinámicamente -->
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeEventModal()">
+                    Cancelar
+                </button>
+                <button class="btn btn-confirm" id="confirmButton" onclick="confirmEvent()">
+                    Activar Evento
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notificaciones -->
     <div id="notification" class="notification"></div>
 
@@ -604,88 +823,109 @@
         };
         let simulationSpeed = 1.0;
         let isConnected = false;
+        let selectedEventId = null; // Para el modal de confirmación
 
-        // Eventos económicos especiales para admin
+        // Eventos económicos especiales para admin (completos con toda la información)
         const ADMIN_EVENTS = [
             {
                 id: 'market_crash',
                 name: 'Crisis Financiera Global',
-                description: 'Colapso repentino del mercado que afecta todos los recursos',
+                description: 'Colapso repentino del mercado que afecta todos los recursos de manera devastadora. Los precios se vuelven extremadamente volátiles y las reservas se agotan rápidamente, creando pánico entre los agentes comerciales.',
                 effects: { supply: -0.4, demand: -0.3, volatility: 2.0 },
                 resources: ['agua', 'comida', 'energia', 'materiales'],
-                rarity: 'legendary'
-            },
-            {
-                id: 'tech_revolution',
-                name: 'Revolución Tecnológica',
-                description: 'Avance tecnológico que transforma la eficiencia energética',
-                effects: { supply: 0.6, demand: -0.2, volatility: 1.5 },
-                resources: ['energia'],
-                rarity: 'epic'
-            },
-            {
-                id: 'climate_disaster',
-                name: 'Desastre Climático Extremo',
-                description: 'Evento climático que destruye infraestructura crítica',
-                effects: { supply: -0.5, demand: 0.4, volatility: 1.8 },
-                resources: ['agua', 'comida'],
-                rarity: 'rare'
+                rarity: 'legendary',
+                duration: 8,
+                icon: '🌪️'
             },
             {
                 id: 'gold_rush',
                 name: 'Fiebre de Recursos',
-                description: 'Descubrimiento masivo que inunda el mercado',
+                description: 'Descubrimiento masivo de nuevos yacimientos que inunda progresivamente el mercado con materiales abundantes, reduciendo costos pero creando inestabilidad en los precios.',
                 effects: { supply: 0.8, demand: 0.2, volatility: 1.3 },
                 resources: ['materiales'],
-                rarity: 'epic'
+                rarity: 'epic',
+                duration: 10,
+                icon: '⛏️'
             },
             {
                 id: 'pandemic_lockdown',
                 name: 'Confinamiento Global',
-                description: 'Restricciones mundiales que paralizan el comercio',
+                description: 'Restricciones sanitarias mundiales que paralizan el comercio internacional, afectando la cadena de suministro y alterando patrones de consumo en todos los sectores económicos.',
                 effects: { supply: -0.3, demand: -0.4, volatility: 1.6 },
                 resources: ['agua', 'comida', 'energia', 'materiales'],
-                rarity: 'legendary'
+                rarity: 'legendary',
+                duration: 12,
+                icon: '🔒'
             },
             {
                 id: 'ai_automation',
                 name: 'Automatización por IA',
-                description: 'Robots reemplazan trabajadores en sectores clave',
+                description: 'Robots y sistemas de inteligencia artificial reemplazan trabajadores en sectores clave, aumentando la eficiencia productiva pero alterando fundamentalmente los patrones laborales.',
                 effects: { supply: 0.4, demand: -0.3, volatility: 1.2 },
                 resources: ['materiales', 'energia'],
-                rarity: 'epic'
+                rarity: 'epic',
+                duration: 15,
+                icon: '🤖'
             },
             {
                 id: 'space_mining',
                 name: 'Minería Espacial',
-                description: 'Explotación de asteroides revoluciona los materiales',
+                description: 'La explotación comercial de asteroides revoluciona la disponibilidad de materiales raros, creando una abundancia sin precedentes pero desestabilizando los mercados tradicionales.',
                 effects: { supply: 1.2, demand: 0.1, volatility: 2.2 },
                 resources: ['materiales'],
-                rarity: 'legendary'
+                rarity: 'legendary',
+                duration: 20,
+                icon: '🚀'
             },
             {
                 id: 'fusion_breakthrough',
                 name: 'Energía de Fusión',
-                description: 'Fusión nuclear comercial resuelve la crisis energética',
+                description: 'El desarrollo de fusión nuclear comercialmente viable resuelve la crisis energética global, transformando completamente el sector energético y sus dependencias.',
                 effects: { supply: 0.9, demand: -0.5, volatility: 1.7 },
                 resources: ['energia'],
-                rarity: 'legendary'
+                rarity: 'legendary',
+                duration: 25,
+                icon: '⚛️'
             },
             {
                 id: 'bioengineering_boost',
                 name: 'Revolución Biotecnológica',
-                description: 'Cultivos modificados multiplican la producción de alimentos',
+                description: 'Cultivos genéticamente modificados y técnicas de bioingeniería multiplican la producción agrícola, resolviendo problemas de escasez alimentaria pero generando nuevas dinámicas de mercado.',
                 effects: { supply: 0.7, demand: -0.1, volatility: 1.1 },
                 resources: ['comida'],
-                rarity: 'epic'
+                rarity: 'epic',
+                duration: 12,
+                icon: '🧬'
             },
             {
                 id: 'water_wars',
                 name: 'Conflictos por Agua',
-                description: 'Disputas geopolíticas por recursos hídricos escasos',
+                description: 'Disputas geopolíticas por recursos hídricos escasos escalan a nivel internacional, creando inestabilidad en el suministro de agua y afectando la seguridad alimentaria global.',
                 effects: { supply: -0.6, demand: 0.8, volatility: 2.5 },
                 resources: ['agua'],
-                rarity: 'rare'
+                rarity: 'rare',
+                duration: 8,
+                icon: '💧'
+            },
+             {
+                id: 'tech_revolution',
+                name: 'Revolución Tecnológica',
+                description: 'Un avance tecnológico revolucionario transforma la eficiencia energética, aumentando significativamente la producción mientras reduce la demanda general a través de nuevas tecnologías más eficientes.',
+                effects: { supply: 0.6, demand: -0.2, volatility: 1.5 },
+                resources: ['energia'],
+                rarity: 'epic',
+                duration: 12,
+                icon: '⚡'
+            },
+            {
+                id: 'climate_disaster',
+                name: 'Desastre Climático Extremo',
+                description: 'Un evento climático catastrófico destruye infraestructura crítica, reduciendo drásticamente la oferta de recursos básicos mientras aumenta desesperadamente la demanda de supervivencia.',
+                effects: { supply: -0.5, demand: 0.4, volatility: 1.8 },
+                resources: ['agua', 'comida'],
+                rarity: 'rare',
+                duration: 6,
+                icon: '🌪️'
             }
         ];
 
@@ -945,19 +1185,121 @@
             logActivity('Configuración exportada', 'info');
         }
 
-        // Funciones de eventos
+        // ========== FUNCIONES DEL MODAL DE CONFIRMACIÓN ==========
+
+        // Función mejorada para activar eventos (ahora muestra el modal)
         function triggerEvent(eventId) {
             const event = ADMIN_EVENTS.find(e => e.id === eventId);
-            if (!event) return;
-
-            if (confirm(`¿Activar evento "${event.name}"?\n\n${event.description}`)) {
-                socket.emit('admin_trigger_event', { eventId: eventId });
-                logActivity(`Evento activado: ${event.name}`, 'warning');
-                showNotification(`Evento activado: ${event.name}`, 'warning');
+            if (!event) {
+                console.error('Evento no encontrado:', eventId);
+                return;
             }
+
+            // En lugar del confirm simple, mostrar nuestro modal elegante
+            showEventModal(eventId);
         }
 
-        // Funciones de UI
+        // Nueva función para mostrar el modal con los detalles del evento
+        function showEventModal(eventId) {
+            const event = ADMIN_EVENTS.find(e => e.id === eventId);
+            if (!event) {
+                console.error('Evento no encontrado para modal:', eventId);
+                return;
+            }
+
+            selectedEventId = eventId;
+
+            // Actualizar el icono del modal
+            document.getElementById('modalIcon').textContent = event.icon;
+
+            // Generar los detalles del evento dinámicamente
+            const eventDetails = document.getElementById('eventDetails');
+            eventDetails.innerHTML = `
+                <div class="event-name">${event.name}</div>
+                <div class="event-description">${event.description}</div>
+                
+                <div class="event-effects">
+                    <div class="effect-item">
+                        <div class="effect-label">Oferta</div>
+                        <div class="effect-value ${event.effects.supply < 0 ? 'effect-negative' : ''}">
+                            ${event.effects.supply > 0 ? '+' : ''}${(event.effects.supply * 100).toFixed(0)}%
+                        </div>
+                    </div>
+                    <div class="effect-item">
+                        <div class="effect-label">Demanda</div>
+                        <div class="effect-value ${event.effects.demand < 0 ? 'effect-negative' : ''}">
+                            ${event.effects.demand > 0 ? '+' : ''}${(event.effects.demand * 100).toFixed(0)}%
+                        </div>
+                    </div>
+                    <div class="effect-item">
+                        <div class="effect-label">Volatilidad</div>
+                        <div class="effect-value">
+                            ${event.effects.volatility}x
+                        </div>
+                    </div>
+                    <div class="effect-item">
+                        <div class="effect-label">Duración</div>
+                        <div class="effect-value">
+                            ${event.duration} ticks
+                        </div>
+                    </div>
+                </div>
+
+                <div class="resources-affected">
+                    <div class="resources-label">📦 Recursos Afectados:</div>
+                    <div class="resources-list">${event.resources.join(', ')}</div>
+                </div>
+
+                <div style="text-align: center; margin-top: 15px;">
+                    <span class="rarity-badge rarity-${event.rarity}">${event.rarity}</span>
+                </div>
+            `;
+
+            // Mostrar el modal con animación
+            const modal = document.getElementById('eventModal');
+            modal.classList.add('active');
+
+            // Hacer que el fondo sea no scrolleable
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Función para cerrar el modal
+        function closeEventModal() {
+            const modal = document.getElementById('eventModal');
+            modal.classList.remove('active');
+            selectedEventId = null;
+
+            // Restaurar el scroll del fondo
+            document.body.style.overflow = 'auto';
+        }
+
+        // Función para confirmar y activar el evento (conecta con tu lógica del servidor)
+        function confirmEvent() {
+            if (!selectedEventId) {
+                console.error('No hay evento seleccionado para confirmar');
+                return;
+            }
+
+            if (!isConnected) {
+                showNotification('No conectado al servidor', 'error');
+                closeEventModal();
+                return;
+            }
+
+            const event = ADMIN_EVENTS.find(e => e.id === selectedEventId);
+            
+            // Tu lógica original para activar el evento
+            socket.emit('admin_trigger_event', { eventId: selectedEventId });
+            logActivity(`Evento activado: ${event.name}`, 'warning');
+            showNotification(`Evento activado: ${event.name}`, 'warning');
+
+            console.log(`🌍 Evento "${event.name}" activado exitosamente`);
+            
+            closeEventModal();
+        }
+
+        // ========== FUNCIONES DE UI ==========
+
         function updateConnectionStatus(message, type) {
             const statusEl = document.getElementById('connectionStatus');
             statusEl.textContent = message;
@@ -1017,7 +1359,7 @@
         }
 
         function renderAdminEvents() {
-            const eventsGrid = document.querySelector('.events-grid');
+            const eventsGrid = document.getElementById('eventsGrid');
             eventsGrid.innerHTML = '';
 
             ADMIN_EVENTS.forEach(event => {
@@ -1034,11 +1376,12 @@
                 eventCard.style.borderLeftColor = rarityColors[event.rarity] || '#fdcb6e';
 
                 eventCard.innerHTML = `
-                    <div class="event-name">${event.name}</div>
-                    <div class="event-description">${event.description}</div>
+                    <div class="event-name">${event.icon} ${event.name}</div>
+                    <div class="event-description">${event.description.substring(0, 100)}...</div>
                     <div class="event-effects">
                         Recursos: ${event.resources.join(', ')} | 
-                        Rareza: ${event.rarity}
+                        Rareza: ${event.rarity} | 
+                        Duración: ${event.duration} ticks
                     </div>
                 `;
 
@@ -1064,6 +1407,21 @@
             }, 5000);
             
             logActivity('Panel de administrador cargado', 'info');
+
+            // Event Listeners para el modal
+            // Cerrar modal si se hace clic fuera del contenido
+            document.getElementById('eventModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeEventModal();
+                }
+            });
+
+            // Cerrar modal con la tecla Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && selectedEventId) {
+                    closeEventModal();
+                }
+            });
         });
 
         // Manejar errores de JavaScript

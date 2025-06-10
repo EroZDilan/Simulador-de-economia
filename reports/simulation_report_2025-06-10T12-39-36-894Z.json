@@ -1,0 +1,96 @@
+{
+  "sessionSummary": {
+    "duration": 134921,
+    "totalTicks": 7,
+    "participantCounts": {
+      "humans": 1,
+      "standardBots": 0,
+      "qLearningBots": 2
+    },
+    "totalVolume": 40,
+    "totalTransactions": 32
+  },
+  "finalPerformances": [
+    {
+      "id": "qbot_15ac98ef-1e78-4359-9932-33e37b9df9de",
+      "name": "AI_Aggressive_1",
+      "type": "Q-Learning",
+      "netWorth": 2719,
+      "roi": 171.9
+    },
+    {
+      "id": "qbot_1eeaeb49-b21f-45c2-baea-d579f79f7ac2",
+      "name": "AI_Aggressive_2",
+      "type": "Q-Learning",
+      "netWorth": 2714,
+      "roi": 171.4
+    },
+    {
+      "id": "fMB6d7pnPP4DstJQAAAH",
+      "name": "Eros",
+      "type": "Human",
+      "netWorth": 2692,
+      "roi": 169.2
+    }
+  ],
+  "marketSummary": {
+    "finalPrices": {
+      "agua": 11,
+      "comida": 15,
+      "energia": 21,
+      "materiales": 27
+    },
+    "finalVolatility": 0.022103864381065808,
+    "finalCycle": "expansion"
+  },
+  "qLearningProgress": [
+    {
+      "name": "AI_Aggressive_1",
+      "strategy": "q_learning_aggressive",
+      "qTableSize": 0,
+      "finalEpsilon": 0.4,
+      "totalReward": 0,
+      "learningEpisodes": 0
+    },
+    {
+      "name": "AI_Aggressive_2",
+      "strategy": "q_learning_aggressive",
+      "qTableSize": 0,
+      "finalEpsilon": 0.4,
+      "totalReward": 0,
+      "learningEpisodes": 0
+    }
+  ],
+  "riskAnalysis": {
+    "timestamp": 1749559176894,
+    "totalBots": 2,
+    "riskDistribution": {
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "extreme": 2
+    },
+    "averageRiskScore": 1,
+    "activeAlerts": 3,
+    "highRiskBots": [
+      {
+        "botId": "qbot_15ac98ef-1e78-4359-9932-33e37b9df9de",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      },
+      {
+        "botId": "qbot_1eeaeb49-b21f-45c2-baea-d579f79f7ac2",
+        "riskLevel": "extreme",
+        "riskScore": 1
+      }
+    ],
+    "recommendations": [
+      {
+        "type": "system_wide",
+        "message": "Average risk level is high across all bots",
+        "action": "reduce_overall_risk"
+      }
+    ]
+  },
+  "cartelAlerts": []
+}

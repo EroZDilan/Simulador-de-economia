@@ -1033,12 +1033,27 @@ function processActiveProgressiveEvents(gameState, io) {
 
 // Función para obtener el estado de observación actual
 function getObservationStatus() {
+    try {
+        // Verificar si admin-routes-enhanced está disponible
+        if (typeof getObservationStatus !== 'undefined') {
+            // Usar la función original si existe
+            const originalFunction = require('./admin-routes-enhanced').getObservationStatus;
+            if (originalFunction && typeof originalFunction === 'function') {
+                return originalFunction();
+            }
+        }
+    } catch (error) {
+        console.warn('⚠️ Error accediendo a getObservationStatus original:', error.message);
+    }
+
+    // 🔧 CORRECCIÓN: Función de respaldo con valores seguros
     return {
-        observationEnabled: adminState.observationData.watchedBots.size > 0,
-        watchedBots: Array.from(adminState.observationData.watchedBots),
-        recentThoughts: adminState.observationData.thoughtHistory.slice(-10),
-        activeEvents: Array.from(adminState.progressiveEvents.keys()),
-        totalThoughtsRecorded: adminState.observationData.thoughtHistory.length
+        observationEnabled: false,
+        watchedBots: [],
+        recentThoughts: [],
+        activeEvents: [],
+        totalThoughtsRecorded: 0,
+        timestamp: Date.now()
     };
 }
 

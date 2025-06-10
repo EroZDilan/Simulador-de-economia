@@ -1,0 +1,48 @@
+{
+  "sessionSummary": {
+    "duration": 31130,
+    "totalTicks": 1,
+    "participantCounts": {
+      "humans": 1,
+      "standardBots": 0,
+      "qLearningBots": 0
+    },
+    "totalVolume": 0,
+    "totalTransactions": 0
+  },
+  "finalPerformances": [
+    {
+      "id": "aLSUfewEGLwLzXavAAAD",
+      "name": "Eros",
+      "type": "Human",
+      "netWorth": 2600,
+      "roi": 160
+    }
+  ],
+  "marketSummary": {
+    "finalPrices": {
+      "agua": 10,
+      "comida": 15,
+      "energia": 20,
+      "materiales": 25
+    },
+    "finalVolatility": 0,
+    "finalCycle": "expansion"
+  },
+  "qLearningProgress": [],
+  "riskAnalysis": {
+    "timestamp": 1749561704856,
+    "totalBots": 0,
+    "riskDistribution": {
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "extreme": 0
+    },
+    "averageRiskScore": 0,
+    "activeAlerts": 0,
+    "highRiskBots": [],
+    "recommendations": []
+  },
+  "cartelAlerts": []
+}
